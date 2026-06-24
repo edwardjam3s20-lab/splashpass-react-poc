@@ -44,17 +44,16 @@ function App() {
 
           {/* Main app shell — bottom nav wraps these */}
           <Route
-            path="/"
             element={
               <RequireAuth>
                 <AppShell />
               </RequireAuth>
             }
           >
-            <Route path="home" element={<HomeScreen />} />
-            <Route path="plans" element={<PlansScreen />} />
-            <Route path="loyalty" element={<LoyaltyScreen />} />
-            <Route path="profile" element={<ProfileScreen />} />
+            <Route path="/home" element={<HomeScreen />} />
+            <Route path="/plans" element={<PlansScreen />} />
+            <Route path="/loyalty" element={<LoyaltyScreen />} />
+            <Route path="/profile" element={<ProfileScreen />} />
           </Route>
 
           {/* Full-screen flows, no bottom nav */}
