@@ -1,0 +1,98 @@
+@import "tailwindcss";
+
+@theme {
+  /* Brand palette — ported from the original SplashPass app */
+  --color-bg: #F0F4FF;
+  --color-bg2: #E8EDF8;
+  --color-surface-1: #FFFFFF;
+  --color-surface-2: #F7F9FF;
+  --color-surface-3: #EEF1FA;
+  --color-navy: #0B1437;
+  --color-navy-2: #1A2755;
+  --color-text: #0B1437;
+  --color-muted: #6B7A99;
+  --color-muted-2: #9AA5BE;
+  --color-accent: #4F6EF7;
+  --color-accent-2: #7B5EA7;
+  --color-gold: #F5A623;
+  --color-gold-2: #FFD166;
+  --color-success: #12B76A;
+  --color-danger: #F04438;
+  --color-purple: #7B5EA7;
+
+  --radius-app: 18px;
+  --radius-app-lg: 26px;
+
+  --font-display: 'Syne', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+
+  --shadow-app: 0 2px 16px rgba(11,20,55,.08);
+  --shadow-app-md: 0 8px 32px rgba(11,20,55,.12);
+  --shadow-app-lg: 0 20px 60px rgba(11,20,55,.15);
+
+  /* V2 design system — scoped to auth/onboarding screens in the original app */
+  --color-v2-bg: #F8FAFC;
+  --color-v2-primary: #2563EB;
+  --color-v2-primary-hover: #1D4ED8;
+  --color-v2-subtle: #EFF6FF;
+  --color-v2-text: #0F172A;
+  --color-v2-text2: #64748B;
+  --color-v2-border: #E5E7EB;
+  --color-v2-success: #10B981;
+  --color-v2-error: #EF4444;
+
+  --font-v2-display: 'Syne', sans-serif;
+  --font-v2-body: 'Inter', sans-serif;
+
+  --shadow-v2-sm: 0 1px 3px rgba(15,23,42,.05);
+  --shadow-v2: 0 4px 24px rgba(15,23,42,.06);
+  --shadow-v2-btn: 0 6px 18px rgba(37,99,235,.28);
+  --shadow-v2-btn-hover: 0 8px 22px rgba(37,99,235,.34);
+  --shadow-v2-logo: 0 6px 16px rgba(37,99,235,.3);
+}
+
+@layer base {
+  html, body, #root {
+    height: 100%;
+  }
+
+  body {
+    @apply bg-bg text-text font-body antialiased;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  h1, h2, h3, h4 {
+    @apply font-display text-navy;
+  }
+}
+
+/* Leaflet needs its container to have an explicit height; Tailwind utility
+   classes handle this per-instance, this just keeps Leaflet's own panes happy */
+.leaflet-container {
+  font-family: var(--font-body);
+}
+
+/* User-location pulse marker, ported exactly from the original map styling */
+@keyframes pulse {
+  0%   { transform: scale(1);   opacity: .8; }
+  70%  { transform: scale(2.5); opacity: 0; }
+  100% { transform: scale(1);   opacity: 0; }
+}
+
+/* V2 design system animations (auth / onboarding screens) */
+@keyframes v2FadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
+@keyframes v2Float  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
+@keyframes v2Spin   { to { transform: rotate(360deg); } }
+
+.v2-fade-up {
+  opacity: 0;
+  animation: v2FadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+.v2-fade-up.d1 { animation-delay: 0.05s; }
+.v2-fade-up.d2 { animation-delay: 0.12s; }
+.v2-fade-up.d3 { animation-delay: 0.19s; }
+.v2-fade-up.d4 { animation-delay: 0.26s; }
+
+.v2-float {
+  animation: v2Float 4s ease-in-out infinite;
+}
