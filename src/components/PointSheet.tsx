@@ -34,7 +34,7 @@ export function PointSheet({ point, open, onClose, onBook }: PointSheetProps) {
       {/* Sheet */}
       <div
         className={[
-          'fixed left-0 right-0 bottom-0 z-50 bg-surface-1 rounded-t-app-lg p-6 pb-8',
+          'fixed left-0 right-0 bottom-[72px] z-50 bg-surface-1 rounded-t-app-lg p-6 pb-8',
           'shadow-app-lg transition-transform duration-300',
           open ? 'translate-y-0' : 'translate-y-full',
         ].join(' ')}
