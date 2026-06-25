@@ -43,6 +43,13 @@ export function PlansScreen() {
   return (
     <div style={{ background: '#F5F5F7', minHeight: '100%', paddingBottom: 100 }}>
       <div className="bg-white px-5 pt-4 pb-5" style={{ boxShadow: '0 1px 0 #EBEBED' }}>
+        <button
+          onClick={() => navigate('/profile')}
+          className="sp-press flex h-8 w-8 items-center justify-center rounded-[10px] text-base text-ink mb-3"
+          style={{ background: '#F5F5F7' }}
+        >
+          ←
+        </button>
         <div className="text-[22px] font-extrabold text-ink mb-1" style={{ letterSpacing: '-0.5px' }}>
           Choose Your Plan
         </div>

@@ -120,7 +120,7 @@ export function BookScreen() {
       <div className="bg-white px-4 pt-3 pb-4" style={{ boxShadow: '0 1px 0 #EBEBED' }}>
         <div className="flex items-center gap-3 mb-4">
           <button
-            onClick={() => (step > 0 ? setStep(step - 1) : navigate('/home'))}
+            onClick={() => (step > 0 ? setStep(step - 1) : navigate('/discover'))}
             className="sp-press flex h-9 w-9 items-center justify-center rounded-[11px] text-lg text-ink"
             style={{ background: '#F5F5F7' }}
           >

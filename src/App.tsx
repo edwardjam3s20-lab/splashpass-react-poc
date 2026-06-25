@@ -6,6 +6,8 @@ import { VerifyEmailScreen } from './screens/VerifyEmailScreen'
 import { ProfileSetupScreen } from './screens/ProfileSetupScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { HomeScreen } from './screens/HomeScreen'
+import { DiscoveryScreen } from './screens/DiscoveryScreen'
+import { BookingsScreen } from './screens/BookingsScreen'
 import { BookScreen } from './screens/BookScreen'
 import { MpesaBookingScreen } from './screens/MpesaBookingScreen'
 import { MpesaSubscriptionScreen } from './screens/MpesaSubscriptionScreen'
@@ -51,12 +53,28 @@ function App() {
             }
           >
             <Route path="/home" element={<HomeScreen />} />
-            <Route path="/plans" element={<PlansScreen />} />
-            <Route path="/loyalty" element={<LoyaltyScreen />} />
+            <Route path="/discover" element={<DiscoveryScreen />} />
+            <Route path="/bookings" element={<BookingsScreen />} />
             <Route path="/profile" element={<ProfileScreen />} />
           </Route>
 
           {/* Full-screen flows, no bottom nav */}
+          <Route
+            path="/plans"
+            element={
+              <RequireAuth>
+                <PlansScreen />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/loyalty"
+            element={
+              <RequireAuth>
+                <LoyaltyScreen />
+              </RequireAuth>
+            }
+          />
           <Route
             path="/book/:pointId"
             element={

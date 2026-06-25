@@ -10,7 +10,7 @@ export function BookingConfirmedScreen() {
   const [smsNote, setSmsNote] = useState('📱 Sending confirmation SMS...')
 
   useEffect(() => {
-    if (!pendingBooking) { navigate('/home', { replace: true }); return }
+    if (!pendingBooking) { navigate('/bookings', { replace: true }); return }
     if (!currentUser?.phone) { setSmsNote('No phone number on file'); return }
     sendBookingSms(currentUser.phone, pendingBooking.booking.location, pendingBooking.date, pendingBooking.booking.time)
       .then((success) => {
@@ -88,10 +88,10 @@ export function BookingConfirmedScreen() {
         View Wash Pass (QR) →
       </button>
       <button
-        onClick={() => navigate('/home')}
+        onClick={() => navigate('/bookings')}
         className="sp-press w-full rounded-[16px] py-4 text-[15px] font-bold text-ink"
         style={{ background: '#F5F5F7', border: '1px solid #EBEBED' }}>
-        Back to Home
+        View My Bookings
       </button>
     </div>
   )

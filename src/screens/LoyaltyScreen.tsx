@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
 import { LOYALTY_TIERS, REDEEM_CATALOGUE, TIER_RANK, getTier } from '../lib/loyalty'
 import {
@@ -7,6 +8,7 @@ import {
 } from '../lib/loyaltyApi'
 
 export function LoyaltyScreen() {
+  const navigate = useNavigate()
   const currentUser = useAppStore((s) => s.currentUser)
   const showToast = useAppStore((s) => s.showToast)
 
@@ -67,8 +69,17 @@ export function LoyaltyScreen() {
           background: '#FFD60A', opacity: 0.07, pointerEvents: 'none',
         }} />
 
-        <div className="text-[20px] font-extrabold text-white mb-1" style={{ letterSpacing: '-0.4px' }}>
-          Your Rewards
+        <div className="flex items-center gap-3 mb-1">
+          <button
+            onClick={() => navigate('/profile')}
+            className="sp-press flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] text-base text-white"
+            style={{ background: 'rgba(255,255,255,0.1)' }}
+          >
+            ←
+          </button>
+          <div className="text-[20px] font-extrabold text-white" style={{ letterSpacing: '-0.4px' }}>
+            Your Rewards
+          </div>
         </div>
 
         {/* Tier badge */}

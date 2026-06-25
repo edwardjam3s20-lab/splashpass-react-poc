@@ -67,6 +67,12 @@ export function ProfileScreen() {
       ],
     },
     {
+      title: 'Rewards',
+      items: [
+        { icon: '🏆', label: `${tier.icon} ${tier.name} Tier`, sub: `${pts.toLocaleString()} points`, action: () => navigate('/loyalty') },
+      ],
+    },
+    {
       title: 'Account',
       items: [
         { icon: '🔒', label: 'Change Password', sub: '', action: () => navigate('/change-password') },

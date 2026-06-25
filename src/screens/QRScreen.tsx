@@ -22,7 +22,7 @@ export function QRScreen() {
     point: booking.location, date, time: booking.time, code,
   })
 
-  function handleDone() { resetBookingFlow(); navigate('/home') }
+  function handleDone() { resetBookingFlow(); navigate('/bookings') }
 
   return (
     <div className="flex h-full flex-col items-center bg-white overflow-y-auto px-5 pt-6 pb-8">

@@ -1,14 +1,11 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { WashMap } from '../components/WashMap'
-import { PointSheet } from '../components/PointSheet'
-import { useGeolocation } from '../hooks/useGeolocation'
 import { useAppStore } from '../store/useAppStore'
-import { useSortedWashPoints } from '../hooks/useWashPoints'
 import { getCarsByEmail } from '../lib/cars'
 import { getTrialDaysLeft, isOnTrial } from '../lib/access'
 import { getTier } from '../lib/loyalty'
-import type { WashPoint } from '../types/database'
+import { getBookingsByEmail } from '../lib/bookings'
+import type { Booking } from '../types/database'
 
 function greeting() {
   const h = new Date().getHours()
@@ -17,119 +14,73 @@ function greeting() {
   return 'Good evening'
 }
 
-function WashPointCard({
-  point,
-  onSelect,
-  distKm,
+function QuickAction({
+  icon,
+  label,
+  sub,
+  onClick,
+  accent,
 }: {
-  point: WashPoint
-  onSelect: (id: string) => void
-  distKm?: number | null
+  icon: string
+  label: string
+  sub: string
+  onClick: () => void
+  accent?: boolean
 }) {
-  const isOpen = point.status === 'open'
   return (
-    <div
-      onClick={() => isOpen && onSelect(String(point.id))}
-      className="sp-press flex items-center gap-3 rounded-[16px] bg-white p-3.5 mb-2.5"
+    <button
+      onClick={onClick}
+      className="sp-press flex flex-1 flex-col items-start gap-2 rounded-[18px] p-4 text-left"
       style={{
-        border: '1px solid #EBEBED',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
-        opacity: isOpen ? 1 : 0.55,
-        cursor: isOpen ? 'pointer' : 'default',
+        background: accent ? 'linear-gradient(135deg, #0A84FF, #0066CC)' : '#fff',
+        border: accent ? 'none' : '1px solid #EBEBED',
+        boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
       }}
     >
-      {/* Icon */}
       <div
-        className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[13px] text-xl"
-        style={{ background: '#E0FAF9' }}
+        className="flex h-9 w-9 items-center justify-center rounded-[11px] text-[17px]"
+        style={{ background: accent ? 'rgba(255,255,255,0.18)' : '#F5F5F7' }}
       >
-        💧
+        {icon}
       </div>
-
-      {/* Info */}
-      <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2 mb-0.5">
-          <span className="text-[14px] font-bold text-ink truncate">{point.name}</span>
-          {!isOpen && (
-            <span
-              className="text-[10px] font-700 px-2 py-0.5 rounded-full flex-shrink-0"
-              style={{ background: '#FFF0EE', color: '#FF3B30' }}
-            >
-              Closed
-            </span>
-          )}
+      <div>
+        <div className="text-[14px] font-extrabold" style={{ color: accent ? '#fff' : '#0D0D0D' }}>
+          {label}
         </div>
-        <div className="text-[12px] text-muted">
-          {point.area}
-          {distKm != null ? ` · ${distKm.toFixed(1)} km` : ''}
-          {point.services?.length ? ` · ${point.services.length} services` : ''}
+        <div className="text-[11px] mt-0.5" style={{ color: accent ? 'rgba(255,255,255,0.7)' : '#6E6E73' }}>
+          {sub}
         </div>
       </div>
-
-      {/* CTA */}
-      {isOpen && (
-        <div
-          className="flex-shrink-0 rounded-[11px] px-3 py-2 text-[12px] font-bold text-white"
-          style={{ background: '#0A84FF' }}
-        >
-          Book
-        </div>
-      )}
-    </div>
+    </button>
   )
 }
 
-function SkeletonCard() {
-  return (
-    <div className="flex items-center gap-3 rounded-[16px] bg-white p-3.5 mb-2.5" style={{ border: '1px solid #EBEBED' }}>
-      <div className="sp-skeleton h-11 w-11 rounded-[13px] flex-shrink-0" />
-      <div className="flex-1">
-        <div className="sp-skeleton h-4 w-32 mb-2 rounded" />
-        <div className="sp-skeleton h-3 w-24 rounded" />
-      </div>
-    </div>
-  )
+function statusBadge(b: Booking) {
+  if (b.status === 'completed') return { label: 'Completed', bg: 'rgba(48,209,88,0.12)', color: '#1F8A41' }
+  if (b.status === 'cancelled') return { label: 'Cancelled', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
+  return { label: 'Upcoming', bg: 'rgba(10,132,255,0.1)', color: '#0A84FF' }
 }
 
 export function HomeScreen() {
-  useGeolocation()
   const navigate = useNavigate()
-
-  const userLat = useAppStore((s) => s.userLat)
-  const userLng = useAppStore((s) => s.userLng)
-  const { points, isLoading } = useSortedWashPoints(userLat, userLng)
-
   const currentUser = useAppStore((s) => s.currentUser)
   const setUserCars = useAppStore((s) => s.setUserCars)
+  const [recentBooking, setRecentBooking] = useState<Booking | null>(null)
+  const [loadingBooking, setLoadingBooking] = useState(!!currentUser?.email)
 
   useEffect(() => {
     if (!currentUser) return
     getCarsByEmail(currentUser.email).then(setUserCars)
   }, [currentUser, setUserCars])
 
-  const [sheetPoint, setSheetPoint] = useState<WashPoint | null>(null)
-  const [sheetOpen, setSheetOpen] = useState(false)
+  useEffect(() => {
+    if (!currentUser?.email) return
+    getBookingsByEmail(currentUser.email)
+      .then((bookings) => setRecentBooking(bookings[0] ?? null))
+      .catch(() => setRecentBooking(null))
+      .finally(() => setLoadingBooking(false))
+  }, [currentUser])
 
-  const openSheetFor = useCallback(
-    (pointId: string) => {
-      const point = points.find((p) => String(p.id) === String(pointId))
-      if (!point) return
-      setSheetPoint(point)
-      setSheetOpen(true)
-    },
-    [points]
-  )
-
-  const closeSheet = useCallback(() => setSheetOpen(false), [])
-  const handleBook = useCallback(
-    (point: WashPoint) => {
-      setSheetOpen(false)
-      navigate(`/book/${point.id}`)
-    },
-    [navigate]
-  )
-
-  // Derived user state
   const name = currentUser?.name?.split(' ')[0] || 'there'
   const planName = currentUser?.sub_plan_name || (isOnTrial(currentUser) ? 'Free Trial' : 'No Plan')
   const trialDays = getTrialDaysLeft(currentUser)
@@ -138,36 +89,17 @@ export function HomeScreen() {
   const tier = getTier(pts)
   const isActive = currentUser?.sub_status === 'active'
 
-  // Distance calculation helper
-  function distTo(p: WashPoint): number | null {
-    if (userLat == null || userLng == null || p.lat == null || p.lng == null) return null
-    const R = 6371
-    const dLat = ((p.lat - userLat) * Math.PI) / 180
-    const dLon = ((p.lng - userLng) * Math.PI) / 180
-    const a =
-      Math.sin(dLat / 2) ** 2 +
-      Math.cos((userLat * Math.PI) / 180) * Math.cos((p.lat * Math.PI) / 180) * Math.sin(dLon / 2) ** 2
-    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
-  }
-
-  const nearestOpen = points.find((p) => p.status === 'open')
-
   return (
     <div className="flex h-full flex-col" style={{ background: '#F5F5F7' }}>
       {/* ── Header ── */}
       <div className="bg-white px-5 pt-2 pb-4" style={{ boxShadow: '0 1px 0 #EBEBED' }}>
-        {/* Greeting row */}
         <div className="flex items-start justify-between mb-4">
           <div>
             <div className="text-[12px] text-muted font-medium mb-0.5">{greeting()} 👋</div>
-            <div
-              className="text-[20px] font-extrabold text-ink leading-tight"
-              style={{ letterSpacing: '-0.5px' }}
-            >
+            <div className="text-[20px] font-extrabold text-ink leading-tight" style={{ letterSpacing: '-0.5px' }}>
               {name}
             </div>
           </div>
-          {/* Avatar */}
           <div className="relative flex-shrink-0">
             <div
               className="flex h-10 w-10 items-center justify-center rounded-[14px] text-white font-extrabold text-[15px]"
@@ -176,20 +108,16 @@ export function HomeScreen() {
               {(currentUser?.name || '?')[0].toUpperCase()}
             </div>
             <div
-              className="absolute bottom-0 right-0 h-3 w-3 rounded-full border-2 border-white"
+              className="absolute h-3 w-3 rounded-full border-2 border-white"
               style={{ background: '#30D158', bottom: '-2px', right: '-2px' }}
             />
           </div>
         </div>
 
         {/* Status card */}
-        <div
-          className="rounded-[18px] p-4"
-          style={{ background: 'linear-gradient(135deg, #1C2E4A, #0A1628)' }}
-        >
+        <div className="rounded-[18px] p-4" style={{ background: 'linear-gradient(135deg, #1C2E4A, #0A1628)' }}>
           <div className="flex items-start justify-between">
             <div>
-              {/* Plan badge */}
               <span
                 className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[11px] font-bold mb-2"
                 style={{
@@ -199,31 +127,16 @@ export function HomeScreen() {
               >
                 {onTrial ? '🎁 Free Trial' : isActive ? `✨ ${planName}` : '⚠️ Expired'}
               </span>
-              <div
-                className="text-[19px] font-extrabold text-white leading-tight"
-                style={{ letterSpacing: '-0.4px' }}
-              >
+              <div className="text-[19px] font-extrabold text-white leading-tight" style={{ letterSpacing: '-0.4px' }}>
                 {onTrial
                   ? `${trialDays} days left`
                   : isActive
                   ? `${currentUser?.sub_car_limit || 1} car${(currentUser?.sub_car_limit || 1) > 1 ? 's' : ''} covered`
                   : 'Subscribe now'}
               </div>
-              <div className="text-[11px] mt-1" style={{ color: 'rgba(255,255,255,0.4)' }}>
-                {onTrial
-                  ? 'KSh 30 fee per booking'
-                  : isActive
-                  ? `KSh ${[199, 499, 999, 1999].find(() => true)}/mo · unlimited washes`
-                  : 'Trial ended'}
-              </div>
             </div>
-
-            {/* Points */}
             <div className="text-right flex-shrink-0 ml-4">
-              <div
-                className="text-[26px] font-extrabold leading-none"
-                style={{ color: '#FFD60A', letterSpacing: '-1px' }}
-              >
+              <div className="text-[26px] font-extrabold leading-none" style={{ color: '#FFD60A', letterSpacing: '-1px' }}>
                 {pts.toLocaleString()}
               </div>
               <div className="text-[9px] mt-1" style={{ color: 'rgba(255,255,255,0.35)', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
@@ -250,77 +163,76 @@ export function HomeScreen() {
         </div>
       </div>
 
-      {/* ── Map ── */}
-      <div className="relative mx-3 mt-3 rounded-[18px] overflow-hidden" style={{ height: 150 }}>
-        <WashMap points={points} onMarkerClick={openSheetFor} />
-        {/* Nearest wash callout */}
-        {nearestOpen && (
+      <div className="flex-1 overflow-y-auto px-3 pt-3">
+        {/* ── Quick actions ── */}
+        <div className="flex gap-2.5 mb-4">
+          <QuickAction
+            icon="🔍"
+            label="Find a wash"
+            sub="Browse nearby points"
+            onClick={() => navigate('/discover')}
+            accent
+          />
+          <QuickAction
+            icon="🧾"
+            label="My Bookings"
+            sub="View history"
+            onClick={() => navigate('/bookings')}
+          />
+        </div>
+
+        {/* ── Most recent booking ── */}
+        <div className="text-[13px] font-bold text-ink mb-2.5" style={{ letterSpacing: '-0.2px' }}>
+          Recent Activity
+        </div>
+
+        {loadingBooking ? (
+          <div className="rounded-[16px] bg-white p-3.5" style={{ border: '1px solid #EBEBED' }}>
+            <div className="sp-skeleton h-4 w-40 mb-2 rounded" />
+            <div className="sp-skeleton h-3 w-24 rounded" />
+          </div>
+        ) : recentBooking ? (
           <div
-            className="absolute bottom-2.5 left-2.5 right-2.5 flex items-center gap-2.5 rounded-[13px] px-3 py-2.5"
-            style={{
-              background: 'rgba(255,255,255,0.96)',
-              backdropFilter: 'blur(16px)',
-              boxShadow: '0 4px 14px rgba(0,0,0,0.18)',
-            }}
+            onClick={() => navigate('/bookings')}
+            className="sp-press cursor-pointer rounded-[16px] bg-white p-3.5"
+            style={{ border: '1px solid #EBEBED', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}
           >
-            <div
-              className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] text-base"
-              style={{ background: '#E0FAF9' }}
-            >
-              💧
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-[14px] font-bold text-ink truncate">{recentBooking.location}</span>
+              {(() => {
+                const b = statusBadge(recentBooking)
+                return (
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full flex-shrink-0"
+                    style={{ background: b.bg, color: b.color }}
+                  >
+                    {b.label}
+                  </span>
+                )
+              })()}
             </div>
-            <div className="flex-1 min-w-0">
-              <div className="text-[12px] font-bold text-ink truncate">{nearestOpen.name}</div>
-              <div className="text-[10px] text-muted">
-                {nearestOpen.area}
-                {distTo(nearestOpen) != null ? ` · ${distTo(nearestOpen)!.toFixed(1)} km` : ''}
-                {' · Open now'}
-              </div>
+            <div className="text-[12px] text-muted">
+              {recentBooking.date} · {recentBooking.time} · {recentBooking.service_name}
             </div>
+          </div>
+        ) : (
+          <div
+            className="rounded-[16px] bg-white p-5 text-center"
+            style={{ border: '1px solid #EBEBED' }}
+          >
+            <div className="text-3xl mb-2">🚗</div>
+            <div className="text-[14px] font-bold text-ink mb-1">No bookings yet</div>
+            <div className="text-[12px] text-muted mb-3">Find a wash point to get started</div>
             <button
-              onClick={() => openSheetFor(String(nearestOpen.id))}
-              className="flex-shrink-0 rounded-[10px] px-3 py-1.5 text-[11px] font-bold text-white"
+              onClick={() => navigate('/discover')}
+              className="sp-press rounded-[11px] px-4 py-2 text-[13px] font-bold text-white"
               style={{ background: '#0A84FF' }}
             >
-              Book
+              Browse Wash Points
             </button>
           </div>
         )}
       </div>
-
-      {/* ── Wash Points List ── */}
-      <div className="flex-1 overflow-y-auto px-3 pt-3">
-        <div
-          className="text-[13px] font-bold text-ink mb-2.5"
-          style={{ letterSpacing: '-0.2px' }}
-        >
-          Nearby Wash Points
-        </div>
-        {isLoading ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
-        ) : points.length === 0 ? (
-          <div className="text-center py-10">
-            <div className="text-4xl mb-3">🔍</div>
-            <div className="text-[15px] font-bold text-ink mb-1">No wash points found</div>
-            <div className="text-[13px] text-muted">Try enabling location access</div>
-          </div>
-        ) : (
-          points.map((p) => (
-            <WashPointCard
-              key={p.id}
-              point={p}
-              onSelect={openSheetFor}
-              distKm={distTo(p)}
-            />
-          ))
-        )}
-      </div>
-
-      <PointSheet point={sheetPoint} open={sheetOpen} onClose={closeSheet} onBook={handleBook} />
     </div>
   )
 }
