@@ -2,12 +2,8 @@ import { useEffect, useState } from 'react'
 import { useAppStore } from '../store/useAppStore'
 import { LOYALTY_TIERS, REDEEM_CATALOGUE, TIER_RANK, getTier } from '../lib/loyalty'
 import {
-  fetchLoyaltyStatus,
-  fetchLoyaltyTransactions,
-  redeemLoyaltyItem,
-  LEDGER_REASON_LABELS,
-  type LoyaltyStatus,
-  type LoyaltyTransaction,
+  fetchLoyaltyStatus, fetchLoyaltyTransactions, redeemLoyaltyItem,
+  LEDGER_REASON_LABELS, type LoyaltyStatus, type LoyaltyTransaction,
 } from '../lib/loyaltyApi'
 
 export function LoyaltyScreen() {
@@ -20,184 +16,207 @@ export function LoyaltyScreen() {
 
   useEffect(() => {
     if (!currentUser) return
-
     const pts = currentUser.loyalty_points || 0
     const tier = currentUser.loyalty_tier || 'Bronze'
     const tierObj = getTier(pts)
     const nextTierObj = LOYALTY_TIERS[LOYALTY_TIERS.indexOf(tierObj) + 1] ?? null
-
     setStatus({
-      points: pts,
-      tier,
-      discount_addon: tierObj.discount_addon,
+      points: pts, tier, discount_addon: tierObj.discount_addon,
       discount_premium: tierObj.discount_premium,
-      next_tier: nextTierObj?.name ?? null,
-      next_tier_at: nextTierObj?.min ?? null,
+      next_tier: nextTierObj?.name ?? null, next_tier_at: nextTierObj?.min ?? null,
       points_to_next: nextTierObj ? Math.max(0, nextTierObj.min - pts) : 0,
       active_redemptions: [],
     })
-
-    fetchLoyaltyStatus().then((data) => {
-      if (data) setStatus(data)
-    })
+    fetchLoyaltyStatus().then((data) => { if (data) setStatus(data) })
   }, [currentUser])
 
   useEffect(() => {
     setLedgerError(false)
-    fetchLoyaltyTransactions()
-      .then(setLedger)
-      .catch(() => setLedgerError(true))
+    fetchLoyaltyTransactions().then(setLedger).catch(() => setLedgerError(true))
   }, [])
 
   async function handleRedeem(type: string) {
     if (!status) return
     const item = REDEEM_CATALOGUE.find((i) => i.type === type)
     if (!item) return
-
     const result = await redeemLoyaltyItem(type)
-    if (!result.ok) {
-      showToast(result.error || 'Redemption failed', true)
-      return
-    }
+    if (!result.ok) { showToast(result.error || 'Redemption failed', true); return }
     showToast(`✓ ${result.label} activated!`)
     setStatus({ ...status, points: result.pointsRemaining ?? status.points })
   }
 
   if (!status) return null
 
-  const points = status.points
-  const tier = status.tier
-  const nextTier = status.next_tier
-  const toNext = status.points_to_next
-  const discAddon = status.discount_addon
-  const discPrem = status.discount_premium
+  const { points, tier, next_tier: nextTier, points_to_next: toNext, discount_addon: discAddon, discount_premium: discPrem } = status
   const tierObj = getTier(points)
   const nextAt = status.next_tier_at
   const pct = nextAt ? Math.min(100, Math.round((points / nextAt) * 100)) : 100
   const userRank = TIER_RANK[tier] ?? 0
 
   return (
-    <div className="bg-bg px-4.5 pt-6 pb-6">
-      <h2 className="mb-5 text-xl font-bold text-navy">Rewards</h2>
+    <div style={{ background: '#F5F5F7', minHeight: '100%', paddingBottom: 100 }}>
+      {/* ── Rewards hero card ── */}
+      <div
+        className="relative overflow-hidden px-5 pt-5 pb-6"
+        style={{ background: 'linear-gradient(160deg, #0A1628 0%, #1A0A3A 100%)' }}
+      >
+        {/* Glow orb */}
+        <div style={{
+          position: 'absolute', right: -50, top: -50,
+          width: 200, height: 200, borderRadius: 100,
+          background: '#FFD60A', opacity: 0.07, pointerEvents: 'none',
+        }} />
 
-      <div className="relative mb-4 overflow-hidden rounded-3xl bg-gradient-to-br from-[#1A2755] via-[#0B1437] to-[#2D1B6B] p-6 shadow-app-lg">
-        <div className="pointer-events-none absolute -right-10 -top-10 h-[180px] w-[180px] rounded-full bg-[radial-gradient(circle,rgba(245,166,35,0.15)_0%,transparent_70%)]" />
-
-        <div className="relative mb-4 inline-flex items-center gap-2 rounded-full border border-white/15 bg-white/10 px-3.5 py-1.5 text-xs font-bold uppercase tracking-wide text-white">
-          <span>{tierObj.icon}</span>
-          <span>{tier}</span>
+        <div className="text-[20px] font-extrabold text-white mb-1" style={{ letterSpacing: '-0.4px' }}>
+          Your Rewards
         </div>
 
-        <div className="relative mb-1 font-display text-[52px] font-extrabold leading-none text-gold-2">
+        {/* Tier badge */}
+        <div className="inline-flex items-center gap-1.5 rounded-full px-3 py-1 mb-3"
+          style={{ background: 'rgba(255,255,255,0.09)', border: '1px solid rgba(255,255,255,0.14)' }}>
+          <span>{tierObj.icon}</span>
+          <span className="text-[12px] font-bold text-white uppercase tracking-wider">{tier}</span>
+        </div>
+
+        {/* Points display */}
+        <div className="text-[52px] font-extrabold leading-none mb-1"
+          style={{ color: '#FFD60A', letterSpacing: '-2px' }}>
           {points.toLocaleString()}
         </div>
-        <div className="relative mb-4 text-[13px] text-white/55">SplashPass Points</div>
-
-        <div className="relative mb-1.5 h-1.5 overflow-hidden rounded-full bg-white/10">
-          <div
-            className="h-full rounded-full bg-gradient-to-r from-gold-2 to-gold transition-all duration-700"
-            style={{ width: `${pct}%` }}
-          />
+        <div className="text-[13px] mb-4" style={{ color: 'rgba(255,255,255,0.4)' }}>
+          SplashPass Points
         </div>
-        <div className="relative flex justify-between text-[11px] text-white/45">
+
+        {/* Progress bar */}
+        <div className="h-1.5 rounded-full overflow-hidden mb-2"
+          style={{ background: 'rgba(255,255,255,0.09)' }}>
+          <div className="h-full rounded-full transition-all duration-700"
+            style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #FFD60A, #FF9500)' }} />
+        </div>
+        <div className="flex justify-between text-[11px]" style={{ color: 'rgba(255,255,255,0.38)' }}>
           <span>{points.toLocaleString()} pts</span>
           <span>{nextTier ? `${toNext.toLocaleString()} pts to ${nextTier}` : 'Max tier reached 🎉'}</span>
         </div>
 
+        {/* Active perks */}
         {(discAddon > 0 || discPrem > 0) && (
-          <div className="relative mt-3.5 inline-flex items-center gap-1.5 rounded-full border border-gold/30 bg-gold/15 px-3.5 py-1.5 text-xs font-bold text-gold-2">
-            <span>🏷</span>
-            <span>
-              {[discAddon > 0 ? `${discAddon}% off add-ons` : '', discPrem > 0 ? `${discPrem}% off premium services` : '']
-                .filter(Boolean)
-                .join(' · ')}{' '}
-              — active
+          <div className="mt-3 inline-flex items-center gap-1.5 rounded-full px-3 py-1.5"
+            style={{ background: 'rgba(255,214,10,0.14)', border: '1px solid rgba(255,214,10,0.3)' }}>
+            <span className="text-[12px]">🏷</span>
+            <span className="text-[12px] font-bold" style={{ color: '#FFD60A' }}>
+              {[discAddon > 0 ? `${discAddon}% off add-ons` : '', discPrem > 0 ? `${discPrem}% off premium` : ''].filter(Boolean).join(' · ')} — active
             </span>
           </div>
         )}
       </div>
 
-      <div className="mb-2.5 mt-5 text-[11px] font-bold uppercase tracking-wide text-muted">
-        Redeem Points — Access &amp; Privileges
-      </div>
-      {REDEEM_CATALOGUE.map((item) => {
-        const reqRank = item.tier ? TIER_RANK[item.tier] ?? 0 : 0
-        const locked = userRank < reqRank
-        const canAfford = points >= item.cost
-
-        return (
-          <div
-            key={item.type}
-            className="mb-2.5 rounded-2xl border-[1.5px] border-slate-200 bg-white px-4.5 py-4 shadow-app"
-            style={{ opacity: locked ? 0.5 : 1 }}
-          >
-            <div className="mb-1 flex items-center justify-between">
-              <div className="text-sm font-bold text-navy">{item.label}</div>
-              <div className="font-display text-[13px] font-extrabold text-gold">{item.cost} pts</div>
-            </div>
-            <div className="mb-2.5 text-xs leading-relaxed text-muted">{item.desc}</div>
-            {locked ? (
-              <div className="flex items-center gap-1 text-[11px] text-muted-2">
-                🔒 Requires {item.tier} tier
+      <div className="px-4 pt-4">
+        {/* Redeem catalogue */}
+        <div className="text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-3">
+          Redeem Points
+        </div>
+        {REDEEM_CATALOGUE.map((item) => {
+          const reqRank = item.tier ? TIER_RANK[item.tier] ?? 0 : 0
+          const locked = userRank < reqRank
+          const canAfford = points >= item.cost
+          return (
+            <div
+              key={item.type}
+              className="flex items-center gap-3 rounded-[16px] bg-white p-4 mb-2.5"
+              style={{
+                border: '1px solid #EBEBED',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.05)',
+                opacity: locked ? 0.5 : 1,
+              }}
+            >
+              <div className="flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[13px] text-xl"
+                style={{ background: '#FFFBE6' }}>
+                {item.type.includes('wash') ? '🚿' : item.type.includes('premium') ? '💎' : '🏷'}
               </div>
-            ) : (
-              <button
-                type="button"
-                disabled={!canAfford}
-                onClick={() => handleRedeem(item.type)}
-                className={[
-                  'rounded-lg px-4 py-2 text-xs font-bold',
-                  canAfford ? 'bg-gold text-white active:scale-[0.97]' : 'border border-slate-200 text-muted',
-                ].join(' ')}
-              >
-                {canAfford ? 'Redeem' : 'Not enough points'}
-              </button>
-            )}
-          </div>
-        )
-      })}
-
-      <div className="mb-2.5 mt-5 text-[11px] font-bold uppercase tracking-wide text-muted">
-        Point History
-      </div>
-      <div className="rounded-2xl border-[1.5px] border-slate-200 bg-white px-4.5 shadow-app">
-        {ledgerError ? (
-          <div className="py-5 text-center text-[13px] text-danger">Could not load history.</div>
-        ) : ledger === null ? (
-          <div className="py-5 text-center text-[13px] text-muted">Loading...</div>
-        ) : ledger.length === 0 ? (
-          <div className="py-5 text-center text-[13px] text-muted">No transactions yet</div>
-        ) : (
-          ledger.map((t, i) => {
-            const isPos = t.delta > 0
-            const label = LEDGER_REASON_LABELS[t.reason] || t.reason
-            const date = new Date(t.created_at).toLocaleDateString('en-KE', {
-              day: 'numeric',
-              month: 'short',
-              year: 'numeric',
-            })
-            return (
-              <div
-                key={i}
-                className="flex items-center justify-between border-b border-surface-2 py-3 last:border-0"
-              >
-                <div>
-                  <div className="text-[13px] font-medium text-navy">{label}</div>
-                  <div className="mt-0.5 text-[11px] text-muted">{date}</div>
-                </div>
-                <div
-                  className={[
-                    'font-display text-sm font-extrabold',
-                    isPos ? 'text-success' : 'text-danger',
-                  ].join(' ')}
+              <div className="flex-1 min-w-0">
+                <div className="text-[14px] font-bold text-ink mb-0.5">{item.label}</div>
+                <div className="text-[12px] text-muted mb-1.5">{item.desc}</div>
+                <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-bold"
+                  style={{ background: '#FFFBE6', color: '#A07800' }}>
+                  ⭐ {item.cost} pts
+                </span>
+              </div>
+              {locked ? (
+                <div className="text-[11px] text-muted flex-shrink-0">🔒 {item.tier}</div>
+              ) : (
+                <button
+                  onClick={() => handleRedeem(item.type)}
+                  disabled={!canAfford}
+                  className="sp-press flex-shrink-0 rounded-[11px] px-3 py-2 text-[12px] font-bold"
+                  style={{
+                    background: canAfford ? '#FFD60A' : '#F5F5F7',
+                    color: canAfford ? '#0D0D0D' : '#AEAEB2',
+                    border: canAfford ? 'none' : '1px solid #EBEBED',
+                  }}
                 >
-                  {isPos ? '+' : ''}
-                  {t.delta} pts
+                  {canAfford ? 'Redeem' : 'Not enough'}
+                </button>
+              )}
+            </div>
+          )
+        })}
+
+        {/* History */}
+        <div className="text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-3 mt-5">
+          Point History
+        </div>
+        <div className="rounded-[18px] bg-white overflow-hidden"
+          style={{ border: '1px solid #EBEBED', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}>
+          {ledgerError ? (
+            <div className="py-5 text-center text-[13px]" style={{ color: '#FF3B30' }}>
+              Could not load history.
+            </div>
+          ) : ledger === null ? (
+            <div className="p-4">
+              {[80, 60, 72].map((w, i) => (
+                <div key={i} className="flex items-center gap-3 py-3" style={{ borderBottom: i < 2 ? '1px solid #EBEBED' : 'none' }}>
+                  <div className="sp-skeleton h-8 w-8 rounded-[10px] flex-shrink-0" />
+                  <div className="flex-1">
+                    <div className="sp-skeleton h-3.5 rounded mb-1.5" style={{ width: `${w}%` }} />
+                    <div className="sp-skeleton h-2.5 rounded w-20" />
+                  </div>
+                  <div className="sp-skeleton h-4 w-14 rounded" />
                 </div>
-              </div>
-            )
-          })
-        )}
+              ))}
+            </div>
+          ) : ledger.length === 0 ? (
+            <div className="py-10 text-center">
+              <div className="text-3xl mb-2">⭐</div>
+              <div className="text-[14px] font-bold text-ink mb-1">No points yet</div>
+              <div className="text-[12px] text-muted">Book a wash to start earning</div>
+            </div>
+          ) : (
+            ledger.map((t, i) => {
+              const isPos = t.delta > 0
+              const label = LEDGER_REASON_LABELS[t.reason] || t.reason
+              const date = new Date(t.created_at).toLocaleDateString('en-KE', {
+                day: 'numeric', month: 'short', year: 'numeric',
+              })
+              return (
+                <div key={i} className="flex items-center gap-3 px-4 py-3"
+                  style={{ borderBottom: i < ledger.length - 1 ? '1px solid #EBEBED' : 'none' }}>
+                  <div className="flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-[10px] text-sm"
+                    style={{ background: isPos ? '#E8F9ED' : '#FFF0EE' }}>
+                    {isPos ? '⬆' : '⬇'}
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="text-[13px] font-semibold text-ink truncate">{label}</div>
+                    <div className="text-[11px] text-muted mt-0.5">{date}</div>
+                  </div>
+                  <div className="text-[14px] font-extrabold flex-shrink-0"
+                    style={{ color: isPos ? '#30D158' : '#FF3B30' }}>
+                    {isPos ? '+' : ''}{t.delta} pts
+                  </div>
+                </div>
+              )
+            })
+          )}
+        </div>
       </div>
     </div>
   )

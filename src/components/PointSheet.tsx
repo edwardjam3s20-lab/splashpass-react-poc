@@ -3,14 +3,7 @@ import { useAppStore } from '../store/useAppStore'
 import type { WashPoint } from '../types/database'
 
 interface PointSheetProps {
-  point: WashPoint | null
-  open: boolean
-  onClose: () => void
-  onBook: (point: WashPoint) => void
-}
-
-function formatDistance(dist: number) {
-  return dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away`
+  point: WashPoint | null; open: boolean; onClose: () => void; onBook: (point: WashPoint) => void
 }
 
 export function PointSheet({ point, open, onClose, onBook }: PointSheetProps) {
@@ -19,56 +12,79 @@ export function PointSheet({ point, open, onClose, onBook }: PointSheetProps) {
 
   if (!point) return null
 
-  const distLabel = formatDistance(distKm(userLat, userLng, point.lat, point.lng))
+  const dist = distKm(userLat, userLng, point.lat, point.lng)
+  const distLabel = dist < 1 ? `${Math.round(dist * 1000)}m away` : `${dist.toFixed(1)}km away`
+  const isOpen = point.status === 'open' || point.status === 'paused'
 
   return (
     <>
       {/* Overlay */}
-      <div
-        onClick={onClose}
-        className={[
-          'fixed inset-0 bg-navy/40 z-40 transition-opacity',
-          open ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none',
-        ].join(' ')}
-      />
+      <div onClick={onClose}
+        className="fixed inset-0 z-40 transition-opacity duration-300"
+        style={{ background: 'rgba(10,22,40,0.5)', backdropFilter: 'blur(4px)', opacity: open ? 1 : 0, pointerEvents: open ? 'auto' : 'none' }} />
+
       {/* Sheet */}
       <div
-        className={[
-          'fixed left-0 right-0 bottom-[72px] z-50 bg-surface-1 rounded-t-app-lg p-6 pb-8',
-          'shadow-app-lg transition-transform duration-300',
-          open ? 'translate-y-0' : 'translate-y-full',
-        ].join(' ')}
-        role="dialog"
-        aria-modal="true"
-        aria-label={`${point.name} details`}
+        className="fixed left-0 right-0 z-50 rounded-t-[28px] bg-white px-5 pt-4 pb-8"
+        style={{
+          bottom: 72,
+          boxShadow: '0 -8px 40px rgba(10,22,40,0.18)',
+          transform: open ? 'translateY(0)' : 'translateY(100%)',
+          transition: 'transform 0.32s cubic-bezier(0.32,0.72,0,1)',
+        }}
+        role="dialog" aria-modal="true" aria-label={`${point.name} details`}
       >
-        <div className="mx-auto mb-5 h-1.5 w-10 rounded-full bg-slate-200" />
+        {/* Handle bar */}
+        <div className="mx-auto mb-5 h-1 w-10 rounded-full" style={{ background: '#EBEBED' }} />
 
-        <h3 className="text-lg font-bold text-navy">{point.name}</h3>
-        <p className="text-sm text-muted mt-0.5">{point.area}</p>
-        <p className="text-sm font-semibold text-accent mt-1">{distLabel}</p>
-
-        <div className="flex flex-wrap gap-2 mt-4 mb-6">
-          {point.services.length ? (
-            point.services.map((s) => (
-              <div
-                key={s.id}
-                className="rounded-full bg-surface-3 px-3 py-1.5 text-xs font-medium text-navy"
-              >
-                💧 {s.name} — KSh {Number(s.price).toLocaleString()}
-              </div>
-            ))
-          ) : (
-            <div className="text-xs text-muted">Services loading…</div>
+        {/* Header */}
+        <div className="flex items-start justify-between mb-4">
+          <div className="flex items-center gap-3">
+            <div className="flex h-12 w-12 flex-shrink-0 items-center justify-center rounded-[15px] text-2xl"
+              style={{ background: '#E0FAF9' }}>
+              💧
+            </div>
+            <div>
+              <div className="text-[17px] font-extrabold text-ink" style={{ letterSpacing: '-0.3px' }}>{point.name}</div>
+              <div className="text-[12px] text-muted mt-0.5">{point.area} · {distLabel}</div>
+            </div>
+          </div>
+          {!isOpen && (
+            <span className="rounded-full px-2.5 py-1 text-[11px] font-bold flex-shrink-0"
+              style={{ background: '#FFF0EE', color: '#FF3B30' }}>Closed</span>
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={() => onBook(point)}
-          className="w-full rounded-app bg-accent py-3.5 text-sm font-bold text-white shadow-app-md active:scale-[0.98] transition-transform"
-        >
-          Book this wash point
+        {/* Services */}
+        {point.services.length > 0 && (
+          <div className="mb-5">
+            <div className="text-[11px] font-bold text-muted uppercase tracking-[0.5px] mb-3">Services & Pricing</div>
+            <div className="flex flex-col gap-2">
+              {point.services.map((s, i) => (
+                <div key={s.id} className="flex items-center justify-between rounded-[12px] px-3 py-2.5"
+                  style={{ background: '#F5F5F7', border: '1px solid #EBEBED' }}>
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-base">{i === 0 ? '🚿' : i === 1 ? '✨' : '💎'}</span>
+                    <span className="text-[13px] font-semibold text-ink">{s.name}</span>
+                  </div>
+                  <span className="text-[14px] font-extrabold" style={{ color: '#0A84FF' }}>
+                    KSh {Number(s.price).toLocaleString()}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* CTA */}
+        <button type="button" onClick={() => onBook(point)} disabled={!isOpen}
+          className="sp-press w-full rounded-[16px] py-4 text-[15px] font-extrabold text-white"
+          style={{
+            background: isOpen ? '#0A84FF' : '#EBEBED',
+            color: isOpen ? '#fff' : '#AEAEB2',
+            boxShadow: isOpen ? '0 8px 24px rgba(10,132,255,0.36)' : 'none',
+          }}>
+          {isOpen ? 'Book This Wash Point →' : 'Currently Closed'}
         </button>
       </div>
     </>

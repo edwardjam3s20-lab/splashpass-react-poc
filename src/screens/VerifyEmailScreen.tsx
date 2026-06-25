@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
-import { V2Screen, V2Logo, V2Spacer } from '../components/v2/V2Layout'
-import { V2Button } from '../components/v2/V2Button'
 import { useAppStore } from '../store/useAppStore'
 
 export function VerifyEmailScreen() {
@@ -13,75 +11,34 @@ export function VerifyEmailScreen() {
 
   function handleContinue() {
     setContinuing(true)
-    // Mirrors the original's brief artificial delay before advancing
-    setTimeout(() => {
-      setContinuing(false)
-      navigate('/profile-setup')
-    }, 500)
+    setTimeout(() => { setContinuing(false); navigate('/profile-setup') }, 500)
   }
 
   return (
-    <V2Screen>
-      <V2Logo />
-
-      <div className="v2-fade-up d1 mb-1.5 flex w-full items-center justify-center">
-        <svg viewBox="0 0 320 240" className="w-full max-w-[280px]">
-          <ellipse cx="160" cy="146" rx="150" ry="94" fill="#EFF6FF" />
-          <g className="v2-float">
-            <rect x="68" y="68" width="184" height="122" rx="16" fill="#FFFFFF" stroke="#E5E7EB" strokeWidth="2" />
-            <path d="M68 84 L160 150 L252 84 L252 76 L160 140 L68 76 Z" fill="#DBEAFE" />
-            <path d="M68 84 L160 150 L252 84" fill="none" stroke="#2563EB" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round" />
-          </g>
-          <circle cx="246" cy="172" r="28" fill="#10B981" />
-          <path d="M234 172l8 8 16-17" fill="none" stroke="#fff" strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" />
-          <path d="M36 66l3 8 8 3-8 3-3 8-3-8-8-3 8-3z" fill="#F5A623" />
-          <circle cx="276" cy="56" r="5" fill="#2563EB" opacity=".3" />
-          <circle cx="46" cy="176" r="6" fill="#2563EB" opacity=".18" />
-        </svg>
+    <div className="flex h-full flex-col items-center justify-center px-6 text-center" style={{ background: '#F5F5F7' }}>
+      <div className="flex h-20 w-20 items-center justify-center rounded-full text-[36px] mb-5 sp-float"
+        style={{ background: 'linear-gradient(135deg, #E0FAF9, #D0F0FF)', border: '2px solid rgba(10,132,255,0.15)' }}>
+        📧
       </div>
-
-      <h1 className="v2-fade-up d2 mb-2 text-center text-[26px] font-extrabold leading-tight tracking-tight">
-        Check Your Email
-      </h1>
-      <p className="v2-fade-up d2 mb-4.5 text-center text-base leading-relaxed text-v2-text2">
-        We've sent a verification link to:
+      <div className="text-[24px] font-extrabold text-ink mb-2" style={{ letterSpacing: '-0.5px' }}>Verify your email</div>
+      <p className="text-[14px] text-muted leading-relaxed mb-2">
+        We sent a verification link to:
       </p>
-      <div className="v2-fade-up d2 mb-6 flex items-center justify-center gap-2 rounded-2xl bg-v2-subtle px-4.5 py-3 text-center text-[14.5px] font-bold text-v2-primary break-all">
-        {email || 'you@example.com'}
+      <div className="rounded-[12px] px-4 py-2 mb-8 text-[14px] font-bold text-ink" style={{ background: '#fff', border: '1px solid #EBEBED' }}>
+        {email || 'your email address'}
       </div>
-
-      <div className="v2-fade-up d3 flex flex-col gap-3">
-        <V2Button loading={continuing} onClick={handleContinue}>
-          Continue →
-        </V2Button>
-        <V2Button variant="secondary" onClick={() => window.open('https://mail.google.com', '_blank')}>
-          Open Gmail
-        </V2Button>
-        <div className="flex gap-3">
-          <div className="flex-1">
-            <V2Button variant="ghost" onClick={() => showToast('Verification email sent.')}>
-              Resend Email
-            </V2Button>
-          </div>
-          <div className="flex-1">
-            <V2Button variant="ghost" onClick={() => navigate('/auth/register')}>
-              Change Email
-            </V2Button>
-          </div>
-        </div>
+      <div className="w-full max-w-sm">
+        <button onClick={handleContinue} disabled={continuing}
+          className="sp-press w-full rounded-[16px] py-4 mb-3 text-[15px] font-extrabold text-white"
+          style={{ background: '#0A84FF', boxShadow: '0 8px 24px rgba(10,132,255,0.36)', opacity: continuing ? 0.6 : 1 }}>
+          {continuing ? 'Loading…' : "I've verified — Continue →"}
+        </button>
+        <button onClick={() => showToast('Check your spam folder too!')}
+          className="sp-press w-full rounded-[16px] py-4 text-[14px] font-semibold text-muted"
+          style={{ background: '#fff', border: '1px solid #EBEBED' }}>
+          Resend email
+        </button>
       </div>
-
-      <V2Spacer />
-
-      <div className="v2-fade-up d4 mt-6 flex flex-wrap items-center justify-center gap-x-4.5 gap-y-2">
-        <div className="flex items-center gap-1.5 text-[13px] font-medium text-v2-text2">
-          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#10B981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="11" width="18" height="10" rx="2" />
-            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-          </svg>
-          Your information is encrypted and secure.
-        </div>
-      </div>
-    </V2Screen>
+    </div>
   )
 }

@@ -8,46 +8,21 @@ interface V2ButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   children: ReactNode
 }
 
-const variantClasses: Record<Variant, string> = {
-  primary:
-    'bg-v2-primary text-white shadow-v2-btn hover:bg-v2-primary-hover hover:shadow-v2-btn-hover hover:-translate-y-px active:translate-y-0 active:scale-[0.98]',
-  secondary:
-    'bg-white text-v2-text border-[1.5px] border-v2-border hover:border-v2-primary hover:bg-v2-subtle hover:text-v2-primary active:scale-[0.98]',
-  ghost: 'bg-transparent text-v2-text2 font-semibold p-2.5 hover:text-v2-primary',
-}
-
-export function V2Button({
-  variant = 'primary',
-  loading = false,
-  disabled,
-  children,
-  className = '',
-  ...rest
-}: V2ButtonProps) {
+export function V2Button({ variant = 'primary', loading = false, disabled, children, className = '', ...rest }: V2ButtonProps) {
+  const styles: Record<Variant, React.CSSProperties> = {
+    primary: { background: '#0A84FF', color: '#fff', boxShadow: '0 8px 24px rgba(10,132,255,0.32)', border: 'none' },
+    secondary: { background: '#fff', color: '#0D0D0D', border: '1.5px solid #EBEBED', boxShadow: 'none' },
+    ghost: { background: 'transparent', color: '#6E6E73', border: 'none', boxShadow: 'none' },
+  }
   return (
-    <button
-      type="button"
-      disabled={disabled || loading}
-      className={[
-        'flex w-full items-center justify-center gap-2 rounded-2xl px-5 py-4 font-v2-body text-base font-bold transition-all',
-        'disabled:cursor-not-allowed disabled:opacity-50',
-        variantClasses[variant],
-        className,
-      ].join(' ')}
-      {...rest}
-    >
+    <button type="button" disabled={disabled || loading}
+      className={`sp-press flex w-full items-center justify-center gap-2 rounded-[16px] px-5 py-4 text-[15px] font-bold transition-all disabled:cursor-not-allowed disabled:opacity-50 ${className}`}
+      style={styles[variant]}
+      {...rest}>
       {loading ? (
-        <span
-          className={[
-            'h-[18px] w-[18px] rounded-full border-[2.5px] animate-spin',
-            variant === 'primary'
-              ? 'border-white/40 border-t-white'
-              : 'border-v2-primary/25 border-t-v2-primary',
-          ].join(' ')}
-        />
-      ) : (
-        children
-      )}
+        <span className="h-[18px] w-[18px] rounded-full border-[2.5px] animate-spin"
+          style={{ borderColor: variant === 'primary' ? 'rgba(255,255,255,0.3)' : 'rgba(10,132,255,0.25)', borderTopColor: variant === 'primary' ? '#fff' : '#0A84FF' }} />
+      ) : children}
     </button>
   )
 }

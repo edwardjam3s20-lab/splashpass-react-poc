@@ -1,157 +1,62 @@
 import { useState } from 'react'
-import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
-import { changePassword as changePasswordRpc, AuthError } from '../lib/auth'
-
-function strengthOf(pass: string): { score: number; label: string; color: string } {
-  if (!pass) return { score: 0, label: '', color: '' }
-  let score = 0
-  if (pass.length >= 8) score++
-  if (/[0-9]/.test(pass)) score++
-  if (/[^A-Za-z0-9]/.test(pass)) score++
-  if (pass.length >= 12) score++
-  const labels = ['Very weak', 'Weak', 'Okay', 'Good', 'Strong']
-  const colors = ['#F04438', '#F5A623', '#F5A623', '#12B76A', '#12B76A']
-  return { score, label: labels[score], color: colors[score] }
-}
+import { changePassword, AuthError } from '../lib/auth'
+import { V2Field, V2FieldError, V2PasswordInput } from '../components/v2/V2Form'
+import { PasswordChecklist, isPasswordValid } from '../components/v2/PasswordChecklist'
 
 export function ChangePasswordScreen() {
   const navigate = useNavigate()
   const currentUser = useAppStore((s) => s.currentUser)
   const showToast = useAppStore((s) => s.showToast)
-
   const [current, setCurrent] = useState('')
-  const [newPass, setNewPass] = useState('')
+  const [next, setNext] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
-  const [success, setSuccess] = useState(false)
   const [saving, setSaving] = useState(false)
 
-  const strength = strengthOf(newPass)
-
-  async function handleSubmit() {
-    setError('')
-    setSuccess(false)
-
-    if (!current) return setError('Please enter your current password.')
-    if (!newPass) return setError('Please enter a new password.')
-    if (newPass.length < 8) return setError('New password must be at least 8 characters.')
-    if (newPass !== confirm) return setError('Passwords do not match.')
-    if (current === newPass) return setError('New password must be different from current password.')
+  async function handleSave() {
+    if (!current || !next || !confirm) { setError('Please fill in all fields.'); return }
+    if (!isPasswordValid(next)) { setError('New password must meet all requirements.'); return }
+    if (next !== confirm) { setError('Passwords do not match.'); return }
     if (!currentUser) return
-
-    setSaving(true)
+    setSaving(true); setError('')
     try {
-      const ok = await changePasswordRpc(currentUser.email, current, newPass)
-      if (!ok) {
-        setError('Current password is incorrect.')
-        return
-      }
-      setSuccess(true)
-      setCurrent('')
-      setNewPass('')
-      setConfirm('')
-      showToast('Password updated successfully!')
+      await changePassword(currentUser.email, current, next)
+      showToast('Password updated!'); navigate('/profile')
     } catch (e) {
-      setError(e instanceof AuthError ? e.message : 'Error updating password.')
-    } finally {
-      setSaving(false)
-    }
+      setError(e instanceof AuthError ? e.message : 'Could not change password.')
+    } finally { setSaving(false) }
   }
 
   return (
-    <div className="bg-bg">
-      <div className="flex items-center gap-3 border-b border-slate-100 bg-surface-1 px-4 py-4">
-        <button
-          onClick={() => navigate('/profile')}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-navy hover:bg-bg"
-        >
-          ←
-        </button>
-        <h2 className="text-base font-bold text-navy">Change Password</h2>
+    <div className="flex h-full flex-col" style={{ background: '#F5F5F7' }}>
+      <div className="flex items-center gap-3 bg-white px-4 py-4" style={{ boxShadow: '0 1px 0 #EBEBED' }}>
+        <button onClick={() => navigate(-1)} className="sp-press flex h-9 w-9 items-center justify-center rounded-[11px] text-lg text-ink" style={{ background: '#F5F5F7' }}>←</button>
+        <div className="text-[16px] font-extrabold text-ink" style={{ letterSpacing: '-0.3px' }}>Change Password</div>
       </div>
-
-      <div className="px-6 py-6">
-        <div className="mb-6 flex items-center gap-3.5 rounded-2xl bg-gradient-to-br from-navy-2 to-navy px-5 py-5">
-          <div className="flex-shrink-0 text-3xl">🔒</div>
-          <div>
-            <div className="mb-0.5 text-sm font-bold text-white">Secure your account</div>
-            <div className="text-xs leading-relaxed text-white/55">
-              Use a strong password with at least 8 characters. You will remain signed in after
-              changing.
-            </div>
-          </div>
+      <div className="flex-1 overflow-y-auto px-4 pt-5 pb-32">
+        <div className="rounded-[18px] bg-white p-4" style={{ border: '1px solid #EBEBED' }}>
+          <V2Field label="Current Password">
+            <V2PasswordInput placeholder="Enter current password" value={current} onChange={(e) => setCurrent(e.target.value)} />
+          </V2Field>
+          <V2Field label="New Password">
+            <V2PasswordInput placeholder="Create new password" value={next} onChange={(e) => setNext(e.target.value)} />
+          </V2Field>
+          <PasswordChecklist password={next} />
+          <V2Field label="Confirm New Password">
+            <V2PasswordInput placeholder="Repeat new password" value={confirm} onChange={(e) => setConfirm(e.target.value)} />
+          </V2Field>
+          <V2FieldError>{error}</V2FieldError>
         </div>
-
-        <Field label="Current Password">
-          <input
-            type="password"
-            placeholder="Enter current password"
-            value={current}
-            onChange={(e) => setCurrent(e.target.value)}
-            className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white px-4 py-3.5 text-sm text-navy outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="New Password">
-          <input
-            type="password"
-            placeholder="At least 8 characters"
-            value={newPass}
-            onChange={(e) => setNewPass(e.target.value)}
-            className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white px-4 py-3.5 text-sm text-navy outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Confirm New Password">
-          <input
-            type="password"
-            placeholder="Repeat new password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white px-4 py-3.5 text-sm text-navy outline-none focus:border-accent"
-          />
-        </Field>
-
-        {newPass && (
-          <div className="mb-4">
-            <div className="mb-1.5 flex gap-1">
-              {[0, 1, 2, 3].map((i) => (
-                <div
-                  key={i}
-                  className="h-1 flex-1 rounded-full transition-colors"
-                  style={{ backgroundColor: i < strength.score ? strength.color : '#E2E8F0' }}
-                />
-              ))}
-            </div>
-            <div className="text-xs text-muted">{strength.label}</div>
-          </div>
-        )}
-
-        {error && <div className="mb-3 text-sm text-danger">{error}</div>}
-        {success && (
-          <div className="mb-4 rounded-2xl border border-success/20 bg-success/10 py-3.5 text-center text-sm text-success">
-            ✓ Password changed successfully!
-          </div>
-        )}
-
-        <button
-          type="button"
-          disabled={saving}
-          onClick={handleSubmit}
-          className="w-full rounded-2xl bg-accent py-4 text-[15px] font-bold text-white shadow-app-md disabled:opacity-50"
-        >
-          {saving ? 'Please wait…' : 'Update Password'}
+      </div>
+      <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-6" style={{ background: 'rgba(245,245,247,0.96)', backdropFilter: 'blur(20px)', borderTop: '1px solid #EBEBED' }}>
+        <button onClick={handleSave} disabled={saving}
+          className="sp-press w-full rounded-[16px] py-4 text-[15px] font-extrabold text-white"
+          style={{ background: '#0A84FF', boxShadow: '0 8px 24px rgba(10,132,255,0.36)', opacity: saving ? 0.6 : 1 }}>
+          {saving ? 'Updating…' : 'Update Password'}
         </button>
       </div>
-    </div>
-  )
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="mb-4">
-      <label className="mb-1.5 block text-sm font-semibold text-muted">{label}</label>
-      {children}
     </div>
   )
 }

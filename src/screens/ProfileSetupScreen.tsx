@@ -1,12 +1,9 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { V2Screen, V2Logo } from '../components/v2/V2Layout'
-import { V2Button } from '../components/v2/V2Button'
-import { V2Field, V2FieldError, V2Input, V2Select } from '../components/v2/V2Form'
 import { useAppStore } from '../store/useAppStore'
 import { updateProfile } from '../lib/auth'
+import { V2Field, V2FieldError, V2Input } from '../components/v2/V2Form'
 
-const CAR_TYPES = ['Sedan', 'SUV', 'Hatchback', 'Pickup', 'Van/Minibus', 'Truck']
 
 export function ProfileSetupScreen() {
   const navigate = useNavigate()
@@ -16,113 +13,65 @@ export function ProfileSetupScreen() {
 
   const [name, setName] = useState(currentUser?.name ?? '')
   const [phone, setPhone] = useState(currentUser?.phone ?? '')
-  const [carType, setCarType] = useState(CAR_TYPES[0])
-  const [plate, setPlate] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
-    if (!name.trim()) {
-      setError('Please enter your name.')
-      return
-    }
-    if (!phone.trim() || phone.trim().length < 9) {
-      setError('Please enter a valid phone number.')
-      return
-    }
-    if (!plate.trim()) {
-      setError('Please enter your car\u2019s number plate.')
-      return
-    }
-    if (!currentUser) {
-      setError('Session expired. Please sign in again.')
-      return
-    }
-
-    setSaving(true)
-    setError('')
+    if (!name.trim()) { setError('Please enter your name.'); return }
+    if (!phone.trim() || phone.trim().length < 9) { setError('Please enter a valid phone number.'); return }
+    if (!currentUser) return
+    setSaving(true); setError('')
     try {
       await updateProfile(currentUser.email, { name: name.trim(), phone: phone.trim() })
       setCurrentUser({ ...currentUser, name: name.trim(), phone: phone.trim() })
-
-      // Car creation is handled by the onboarding flow (next screen), which
-      // is where the original app's startOnboarding() picks up — this
-      // screen's job is just the profile fields per the original split.
-      showToast('Profile saved.')
-      navigate('/onboarding') // placeholder route until onboarding flow is ported
-    } catch {
-      setError('Something went wrong. Please try again.')
-    } finally {
-      setSaving(false)
-    }
+      showToast('Profile saved!'); navigate('/onboarding')
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Could not save profile.')
+    } finally { setSaving(false) }
   }
 
   return (
-    <V2Screen>
-      <V2Logo />
-
-      <div className="v2-fade-up d1">
-        <h1 className="mb-2 text-[26px] font-extrabold leading-tight tracking-tight">
-          Tell us about you
-        </h1>
-        <p className="mb-7 text-base leading-relaxed text-v2-text2">
-          This helps wash operators recognize you and your car.
-        </p>
+    <div className="flex h-full flex-col" style={{ background: '#F5F5F7' }}>
+      {/* Header */}
+      <div className="px-5 pt-10 pb-6 relative overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #0A1628 0%, #0A2A4A 100%)' }}>
+        <div style={{ position: 'absolute', right: -30, top: -30, width: 150, height: 150, borderRadius: 75, background: '#0A84FF', opacity: 0.07, pointerEvents: 'none' }} />
+        <div className="flex items-center gap-2.5 mb-4">
+          <div className="flex h-9 w-9 items-center justify-center rounded-[11px] text-lg"
+            style={{ background: 'linear-gradient(135deg, #00C6BE, #0A84FF)' }}>💧</div>
+          <div className="text-[16px] font-extrabold text-white" style={{ letterSpacing: '-0.3px' }}>SplashPass</div>
+        </div>
+        <div className="text-[22px] font-extrabold text-white mb-1" style={{ letterSpacing: '-0.5px' }}>Set up your profile</div>
+        <div className="text-[13px]" style={{ color: 'rgba(255,255,255,0.45)' }}>Just a few details to get started.</div>
       </div>
 
-      <div className="v2-fade-up d2">
-        <V2Field label="Full Name">
-          <V2Input
-            placeholder="e.g. Edward James"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            autoComplete="name"
-          />
-        </V2Field>
-
-        <V2Field label="Phone Number">
-          <V2Input
-            type="tel"
-            placeholder="07XX XXX XXX"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            autoComplete="tel"
-          />
-        </V2Field>
-
-        <div className="my-5.5 flex items-center gap-3 text-[13px] font-medium text-v2-text2">
-          <div className="h-px flex-1 bg-v2-border" />
-          your car
-          <div className="h-px flex-1 bg-v2-border" />
+      <div className="flex-1 overflow-y-auto px-4 pt-5 pb-32">
+        <div className="rounded-[18px] bg-white p-4" style={{ border: '1px solid #EBEBED' }}>
+          <V2Field label="Full Name">
+            <V2Input placeholder="Alex Mwangi" value={name} onChange={(e) => setName(e.target.value)} />
+          </V2Field>
+          <V2Field label="Phone Number (M-Pesa)">
+            <V2Input type="tel" placeholder="0712 345 678" value={phone} onChange={(e) => setPhone(e.target.value)} />
+          </V2Field>
+          <V2FieldError>{error}</V2FieldError>
         </div>
 
-        <V2Field label="Car Type">
-          <V2Select value={carType} onChange={(e) => setCarType(e.target.value)}>
-            {CAR_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </V2Select>
-        </V2Field>
-
-        <V2Field label="Number Plate">
-          <V2Input
-            placeholder="e.g. KDA 123A"
-            value={plate}
-            onChange={(e) => setPlate(e.target.value.toUpperCase())}
-            autoCapitalize="characters"
-          />
-        </V2Field>
-
-        <V2FieldError>{error}</V2FieldError>
-
-        <div className="mt-1.5">
-          <V2Button loading={saving} onClick={handleSave}>
-            Continue →
-          </V2Button>
+        <div className="mt-3 rounded-[14px] p-3.5 flex items-center gap-3" style={{ background: '#E0FAF9' }}>
+          <span className="text-lg flex-shrink-0">📱</span>
+          <span className="text-[12px] font-medium" style={{ color: '#0A2820' }}>
+            Your M-Pesa number is used for booking payments. You can change it later.
+          </span>
         </div>
       </div>
-    </V2Screen>
+
+      <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-6"
+        style={{ background: 'rgba(245,245,247,0.96)', backdropFilter: 'blur(20px)', borderTop: '1px solid #EBEBED' }}>
+        <button onClick={handleSave} disabled={saving}
+          className="sp-press w-full rounded-[16px] py-4 text-[15px] font-extrabold text-white"
+          style={{ background: '#0A84FF', boxShadow: '0 8px 24px rgba(10,132,255,0.36)', opacity: saving ? 0.6 : 1 }}>
+          {saving ? 'Saving…' : 'Continue →'}
+        </button>
+      </div>
+    </div>
   )
 }

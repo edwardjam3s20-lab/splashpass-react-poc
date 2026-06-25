@@ -7,18 +7,52 @@ export function SplashScreen() {
   const currentUser = useAppStore((s) => s.currentUser)
 
   useEffect(() => {
-    const id = setTimeout(() => {
+    const timer = setTimeout(() => {
       navigate(currentUser ? '/home' : '/welcome', { replace: true })
-    }, 900)
-    return () => clearTimeout(id)
+    }, 1400)
+    return () => clearTimeout(timer)
   }, [currentUser, navigate])
 
   return (
-    <div className="flex h-full w-full flex-col items-center justify-center bg-v2-primary">
-      <div className="v2-float flex h-16 w-16 items-center justify-center rounded-[18px] bg-white font-v2-display text-2xl font-extrabold text-v2-primary shadow-v2-logo">
-        S
+    <div
+      className="flex h-full flex-col items-center justify-center"
+      style={{ background: 'linear-gradient(160deg, #0A1628 0%, #0A2A4A 100%)' }}
+    >
+      {/* Animated drop */}
+      <div className="sp-float mb-5">
+        <div
+          className="flex h-20 w-20 items-center justify-center rounded-[24px] text-[40px]"
+          style={{
+            background: 'linear-gradient(135deg, #00C6BE, #0A84FF)',
+            boxShadow: '0 16px 48px rgba(10,132,255,0.4)',
+          }}
+        >
+          💧
+        </div>
       </div>
-      <div className="mt-4 font-v2-display text-lg font-bold text-white">SplashPass</div>
+      <div
+        className="text-[28px] font-extrabold text-white mb-1.5"
+        style={{ letterSpacing: '-0.8px' }}
+      >
+        SplashPass
+      </div>
+      <div className="text-[13px] font-medium" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
+        Premium Car Care
+      </div>
+
+      {/* Loading dots */}
+      <div className="flex gap-1.5 mt-10">
+        {[0, 1, 2].map((i) => (
+          <div
+            key={i}
+            className="h-1.5 w-1.5 rounded-full"
+            style={{
+              background: 'rgba(255,255,255,0.3)',
+              animation: `pulse 1.4s ease-in-out ${i * 0.2}s infinite`,
+            }}
+          />
+        ))}
+      </div>
     </div>
   )
 }

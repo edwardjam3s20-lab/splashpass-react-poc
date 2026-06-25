@@ -8,20 +8,24 @@ export function Toast() {
 
   useEffect(() => {
     if (!message) return
-    const id = setTimeout(hideToast, 3000)
+    const id = setTimeout(hideToast, 3200)
     return () => clearTimeout(id)
   }, [message, hideToast])
 
   return (
     <div
-      className={[
-        'fixed left-1/2 top-6 z-[999] -translate-x-1/2 whitespace-nowrap overflow-hidden text-ellipsis',
-        'max-w-[90vw] rounded-2xl border-l-4 px-5.5 py-3.5 text-sm text-white shadow-app-lg transition-all duration-300',
-        isError ? 'border-l-danger' : 'border-l-gold',
-        message ? 'translate-y-0 opacity-100' : '-translate-y-2 opacity-0 pointer-events-none',
-      ].join(' ')}
-      style={{ backgroundColor: '#1A2755' }}
+      className="fixed left-4 right-4 top-5 z-[999] flex items-center gap-3 whitespace-nowrap overflow-hidden text-ellipsis rounded-[16px] px-4 py-3.5 text-[14px] font-semibold text-white shadow-lg transition-all duration-300"
+      style={{
+        background: isError ? '#1A0A0A' : '#0A1628',
+        border: `1px solid ${isError ? 'rgba(255,59,48,0.3)' : 'rgba(255,255,255,0.1)'}`,
+        boxShadow: '0 8px 32px rgba(0,0,0,0.28)',
+        transform: message ? 'translateY(0)' : 'translateY(-80px)',
+        opacity: message ? 1 : 0,
+        pointerEvents: message ? 'auto' : 'none',
+        backdropFilter: 'blur(20px)',
+      }}
     >
+      <span style={{ fontSize: 16 }}>{isError ? '⚠️' : '✓'}</span>
       {message}
     </div>
   )

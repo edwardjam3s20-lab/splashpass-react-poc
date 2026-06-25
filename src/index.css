@@ -1,54 +1,85 @@
 @import "tailwindcss";
 
 @theme {
-  /* Brand palette — ported from the original SplashPass app */
-  --color-bg: #F0F4FF;
-  --color-bg2: #E8EDF8;
+  /* ── Core brand palette ── */
+  --color-primary:       #0A84FF;
+  --color-primary-dark:  #0066CC;
+  --color-teal:          #00C6BE;
+  --color-teal-light:    #E0FAF9;
+  --color-gold:          #FFD60A;
+  --color-gold-dark:     #A07800;
+  --color-gold-bg:       #FFFBE6;
+  --color-success:       #30D158;
+  --color-success-bg:    #E8F9ED;
+  --color-danger:        #FF3B30;
+  --color-danger-bg:     #FFF0EE;
+
+  /* ── Neutrals ── */
+  --color-ink:           #0D0D0D;
+  --color-navy:          #0A1628;
+  --color-navy-mid:      #1C2E4A;
+  --color-surface-0:     #FFFFFF;
+  --color-surface-1:     #F5F5F7;
+  --color-surface-2:     #EBEBED;
+  --color-muted:         #6E6E73;
+  --color-muted-light:   #AEAEB2;
+
+  /* ── Typography ── */
+  --font-display: 'Syne', system-ui, sans-serif;
+  --font-body:    'Inter', system-ui, -apple-system, sans-serif;
+
+  /* ── Shadows ── */
+  --shadow-card: 0 2px 12px rgba(0,0,0,0.06);
+  --shadow-md:   0 8px 24px rgba(0,0,0,0.12);
+  --shadow-lg:   0 20px 48px rgba(0,0,0,0.16);
+  --shadow-primary: 0 8px 24px rgba(10,132,255,0.32);
+  --shadow-teal:    0 8px 24px rgba(0,198,190,0.32);
+
+  /* Legacy compat aliases for unchanged screens */
+  --color-bg:       #F5F5F7;
+  --color-bg2:      #EBEBED;
   --color-surface-1: #FFFFFF;
-  --color-surface-2: #F7F9FF;
-  --color-surface-3: #EEF1FA;
-  --color-navy: #0B1437;
-  --color-navy-2: #1A2755;
-  --color-text: #0B1437;
-  --color-muted: #6B7A99;
-  --color-muted-2: #9AA5BE;
-  --color-accent: #4F6EF7;
-  --color-accent-2: #7B5EA7;
-  --color-gold: #F5A623;
-  --color-gold-2: #FFD166;
-  --color-success: #12B76A;
-  --color-danger: #F04438;
-  --color-purple: #7B5EA7;
+  --color-surface-2: #F5F5F7;
+  --color-surface-3: #EBEBED;
+  --color-navy:      #0A1628;
+  --color-navy-2:    #1C2E4A;
+  --color-text:      #0D0D0D;
+  --color-muted:     #6E6E73;
+  --color-muted-2:   #AEAEB2;
+  --color-accent:    #0A84FF;
+  --color-accent-2:  #00C6BE;
+  --color-gold:      #FFD60A;
+  --color-gold-2:    #FFD60A;
+  --color-success:   #30D158;
+  --color-danger:    #FF3B30;
+  --color-purple:    #7B5EA7;
 
-  --radius-app: 18px;
-  --radius-app-lg: 26px;
+  --radius-app:    16px;
+  --radius-app-lg: 22px;
 
-  --font-display: 'Syne', sans-serif;
-  --font-body: 'DM Sans', sans-serif;
+  --shadow-app:    0 2px 12px rgba(0,0,0,0.06);
+  --shadow-app-md: 0 8px 24px rgba(0,0,0,0.12);
+  --shadow-app-lg: 0 20px 48px rgba(0,0,0,0.16);
 
-  --shadow-app: 0 2px 16px rgba(11,20,55,.08);
-  --shadow-app-md: 0 8px 32px rgba(11,20,55,.12);
-  --shadow-app-lg: 0 20px 60px rgba(11,20,55,.15);
+  /* V2 compat */
+  --color-v2-bg:           #F5F5F7;
+  --color-v2-primary:      #0A84FF;
+  --color-v2-primary-hover:#0066CC;
+  --color-v2-subtle:       #E0FAF9;
+  --color-v2-text:         #0D0D0D;
+  --color-v2-text2:        #6E6E73;
+  --color-v2-border:       #EBEBED;
+  --color-v2-success:      #30D158;
+  --color-v2-error:        #FF3B30;
 
-  /* V2 design system — scoped to auth/onboarding screens in the original app */
-  --color-v2-bg: #F8FAFC;
-  --color-v2-primary: #2563EB;
-  --color-v2-primary-hover: #1D4ED8;
-  --color-v2-subtle: #EFF6FF;
-  --color-v2-text: #0F172A;
-  --color-v2-text2: #64748B;
-  --color-v2-border: #E5E7EB;
-  --color-v2-success: #10B981;
-  --color-v2-error: #EF4444;
+  --font-v2-display: 'Syne', system-ui, sans-serif;
+  --font-v2-body:    'Inter', system-ui, -apple-system, sans-serif;
 
-  --font-v2-display: 'Syne', sans-serif;
-  --font-v2-body: 'Inter', sans-serif;
-
-  --shadow-v2-sm: 0 1px 3px rgba(15,23,42,.05);
-  --shadow-v2: 0 4px 24px rgba(15,23,42,.06);
-  --shadow-v2-btn: 0 6px 18px rgba(37,99,235,.28);
-  --shadow-v2-btn-hover: 0 8px 22px rgba(37,99,235,.34);
-  --shadow-v2-logo: 0 6px 16px rgba(37,99,235,.3);
+  --shadow-v2-sm:      0 1px 4px rgba(0,0,0,0.05);
+  --shadow-v2:         0 4px 16px rgba(0,0,0,0.08);
+  --shadow-v2-btn:     0 8px 24px rgba(10,132,255,0.32);
+  --shadow-v2-btn-hover: 0 10px 28px rgba(10,132,255,0.38);
+  --shadow-v2-logo:    0 6px 16px rgba(10,132,255,0.28);
 }
 
 @layer base {
@@ -57,7 +88,7 @@
   }
 
   body {
-    @apply bg-bg text-text font-body antialiased;
+    @apply bg-surface-1 text-ink font-body antialiased;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -66,33 +97,90 @@
   }
 }
 
-/* Leaflet needs its container to have an explicit height; Tailwind utility
-   classes handle this per-instance, this just keeps Leaflet's own panes happy */
+/* ── Leaflet ── */
 .leaflet-container {
   font-family: var(--font-body);
 }
 
-/* User-location pulse marker, ported exactly from the original map styling */
+/* ── Animations ── */
 @keyframes pulse {
   0%   { transform: scale(1);   opacity: .8; }
   70%  { transform: scale(2.5); opacity: 0; }
   100% { transform: scale(1);   opacity: 0; }
 }
 
-/* V2 design system animations (auth / onboarding screens) */
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(16px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-6px); }
+}
+
+@keyframes shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+/* V2 compat */
 @keyframes v2FadeUp { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: translateY(0); } }
 @keyframes v2Float  { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-8px); } }
 @keyframes v2Spin   { to { transform: rotate(360deg); } }
 
-.v2-fade-up {
-  opacity: 0;
-  animation: v2FadeUp 0.55s cubic-bezier(0.22, 1, 0.36, 1) forwards;
-}
+.v2-fade-up { opacity:0; animation: v2FadeUp 0.55s cubic-bezier(0.22,1,0.36,1) forwards; }
 .v2-fade-up.d1 { animation-delay: 0.05s; }
 .v2-fade-up.d2 { animation-delay: 0.12s; }
 .v2-fade-up.d3 { animation-delay: 0.19s; }
 .v2-fade-up.d4 { animation-delay: 0.26s; }
+.v2-float { animation: v2Float 4s ease-in-out infinite; }
 
-.v2-float {
-  animation: v2Float 4s ease-in-out infinite;
+/* ── Utility classes ── */
+.sp-fade-up  { opacity:0; animation: fadeUp  0.45s cubic-bezier(0.22,1,0.36,1) forwards; }
+.sp-slide-up { opacity:0; animation: slideUp 0.4s  cubic-bezier(0.22,1,0.36,1) forwards; }
+.sp-fade-in  { opacity:0; animation: fadeIn  0.3s  ease forwards; }
+.sp-d1 { animation-delay: 0.06s; }
+.sp-d2 { animation-delay: 0.12s; }
+.sp-d3 { animation-delay: 0.18s; }
+.sp-d4 { animation-delay: 0.24s; }
+.sp-d5 { animation-delay: 0.30s; }
+
+.sp-float { animation: float 3.5s ease-in-out infinite; }
+
+/* Skeleton loading */
+.sp-skeleton {
+  background: linear-gradient(90deg, #F5F5F7 25%, #EBEBED 50%, #F5F5F7 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+  border-radius: 10px;
+}
+
+/* Press effect */
+.sp-press { transition: transform 0.12s ease; }
+.sp-press:active { transform: scale(0.97); }
+
+/* Card */
+.sp-card {
+  background: #FFFFFF;
+  border-radius: 18px;
+  border: 1px solid #EBEBED;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+}
+
+/* Gradient nav background */
+.sp-nav-blur {
+  background: rgba(255,255,255,0.92);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
 }

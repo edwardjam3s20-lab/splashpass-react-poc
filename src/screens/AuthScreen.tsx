@@ -1,7 +1,5 @@
 import { useState } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
-import { V2Screen, V2Logo } from '../components/v2/V2Layout'
-import { V2Button } from '../components/v2/V2Button'
 import { V2Field, V2FieldError, V2Input, V2PasswordInput } from '../components/v2/V2Form'
 import { PasswordChecklist, isPasswordValid } from '../components/v2/PasswordChecklist'
 import { loginWithEmail, registerWithEmail, AuthError } from '../lib/auth'
@@ -35,13 +33,11 @@ export function AuthScreen() {
   const showToast = useAppStore((s) => s.showToast)
   const setCurrentUser = useAppStore((s) => s.setCurrentUser)
 
-  // login state
   const [loginEmail, setLoginEmail] = useState('')
   const [loginPass, setLoginPass] = useState('')
   const [loginError, setLoginError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
 
-  // register state
   const [regEmail, setRegEmail] = useState('')
   const [regPass, setRegPass] = useState('')
   const [regPass2, setRegPass2] = useState('')
@@ -49,170 +45,188 @@ export function AuthScreen() {
   const [regLoading, setRegLoading] = useState(false)
 
   async function handleLogin() {
-    setLoginLoading(true)
-    setLoginError('')
+    setLoginLoading(true); setLoginError('')
     try {
       const user = await loginWithEmail(loginEmail, loginPass)
-      setCurrentUser(user)
-      navigate('/home') // initApp() handles trial/sub-wall routing inside HomeScreen's guard
+      setCurrentUser(user); navigate('/home')
     } catch (e) {
       setLoginError(e instanceof AuthError ? e.message : 'Something went wrong. Please try again.')
-    } finally {
-      setLoginLoading(false)
-    }
+    } finally { setLoginLoading(false) }
   }
 
   async function handleRegister() {
-    if (!regEmail || !regPass) {
-      setRegError('Please fill in all fields.')
-      return
-    }
-    if (!isPasswordValid(regPass)) {
-      setRegError('Password must meet all requirements above.')
-      return
-    }
-    if (regPass !== regPass2) {
-      setRegError('Passwords do not match.')
-      return
-    }
-    setRegLoading(true)
-    setRegError('')
+    if (!regEmail || !regPass) { setRegError('Please fill in all fields.'); return }
+    if (!isPasswordValid(regPass)) { setRegError('Password must meet all requirements above.'); return }
+    if (regPass !== regPass2) { setRegError('Passwords do not match.'); return }
+    setRegLoading(true); setRegError('')
     try {
       const user = await registerWithEmail(regEmail, regPass)
       setCurrentUser(user)
       navigate(`/verify?email=${encodeURIComponent(regEmail.trim().toLowerCase())}`)
     } catch (e) {
       setRegError(e instanceof AuthError ? e.message : 'Something went wrong. Please try again.')
-    } finally {
-      setRegLoading(false)
-    }
+    } finally { setRegLoading(false) }
   }
 
   return (
-    <V2Screen>
-      <V2Logo />
-
-      {mode === 'login' ? (
-        <div>
-          <div className="v2-fade-up d1">
-            <h1 className="mb-2 text-[26px] font-extrabold leading-tight tracking-tight">Welcome back</h1>
-            <p className="mb-7 text-base leading-relaxed text-v2-text2">
-              Sign in to continue to your account.
-            </p>
+    <div className="flex h-full flex-col overflow-y-auto" style={{ background: '#F5F5F7' }}>
+      {/* Header */}
+      <div
+        className="flex flex-col items-center pt-10 pb-8 px-6 relative overflow-hidden"
+        style={{ background: 'linear-gradient(160deg, #0A1628 0%, #0A2A4A 100%)' }}
+      >
+        <div style={{
+          position: 'absolute', width: 220, height: 220, borderRadius: 110,
+          background: '#0A84FF', opacity: 0.07, top: -50, right: -50, pointerEvents: 'none',
+        }} />
+        {/* Logo */}
+        <div className="flex items-center gap-2.5 mb-6">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[13px] text-xl"
+            style={{ background: 'linear-gradient(135deg, #00C6BE, #0A84FF)', boxShadow: '0 6px 20px rgba(10,132,255,0.4)' }}>
+            💧
           </div>
-          <div className="v2-fade-up d2">
-            <V2Field label="Email Address">
-              <V2Input
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-              />
-            </V2Field>
-            <V2Field label="Password">
-              <V2PasswordInput
-                placeholder="Your password"
-                autoComplete="current-password"
-                value={loginPass}
-                onChange={(e) => setLoginPass(e.target.value)}
-                onKeyDown={(e) => e.key === 'Enter' && handleLogin()}
-              />
-            </V2Field>
-            <V2FieldError>{loginError}</V2FieldError>
-            <div className="mt-1.5 mb-4.5">
-              <V2Button loading={loginLoading} onClick={handleLogin}>
-                Sign In
-              </V2Button>
-            </div>
-            <div className="text-center text-sm text-v2-text2">
-              No account?{' '}
-              <a
-                onClick={() => navigate('/auth/register')}
-                className="cursor-pointer font-bold text-v2-primary hover:underline"
-              >
-                Sign up
-              </a>
-            </div>
+          <div>
+            <div className="text-[17px] font-extrabold text-white" style={{ letterSpacing: '-0.4px' }}>SplashPass</div>
+            <div className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>Premium Car Care</div>
           </div>
         </div>
-      ) : (
-        <div>
-          <div className="v2-fade-up d1">
-            <h1 className="mb-2 text-[26px] font-extrabold leading-tight tracking-tight">
-              Create your account
+
+        {/* Mode switcher */}
+        <div className="w-full max-w-[320px] flex rounded-[14px] p-1"
+          style={{ background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.1)' }}>
+          {(['login', 'register'] as Mode[]).map((m) => (
+            <button key={m} onClick={() => navigate(`/auth/${m}`)}
+              className="flex-1 rounded-[11px] py-2.5 text-[13px] font-bold transition-all"
+              style={{
+                background: mode === m ? '#fff' : 'transparent',
+                color: mode === m ? '#0D0D0D' : 'rgba(255,255,255,0.5)',
+                boxShadow: mode === m ? '0 2px 8px rgba(0,0,0,0.12)' : 'none',
+              }}>
+              {m === 'login' ? 'Sign In' : 'Create Account'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Form area */}
+      <div className="flex-1 px-5 pt-6 pb-8">
+        {mode === 'login' ? (
+          <div className="sp-fade-up">
+            <h1 className="text-[24px] font-extrabold text-ink mb-1.5" style={{ letterSpacing: '-0.5px' }}>
+              Welcome back
             </h1>
-            <p className="mb-7 text-base leading-relaxed text-v2-text2">
-              Start your 30-day free trial — no card required.
+            <p className="text-[14px] text-muted mb-6 leading-relaxed">
+              Sign in to your SplashPass account.
             </p>
-          </div>
-          <div className="v2-fade-up d2">
+
             <V2Field label="Email Address">
-              <V2Input
-                type="email"
-                placeholder="you@example.com"
-                autoComplete="email"
-                value={regEmail}
-                onChange={(e) => setRegEmail(e.target.value)}
-              />
+              <V2Input type="email" placeholder="you@example.com" autoComplete="email"
+                value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
             </V2Field>
             <V2Field label="Password">
-              <V2PasswordInput
-                placeholder="Create a password"
-                autoComplete="new-password"
-                value={regPass}
-                onChange={(e) => setRegPass(e.target.value)}
-              />
+              <V2PasswordInput placeholder="Your password" autoComplete="current-password"
+                value={loginPass} onChange={(e) => setLoginPass(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleLogin()} />
+            </V2Field>
+
+            <div className="text-right mb-4">
+              <span className="text-[13px] font-semibold cursor-pointer" style={{ color: '#0A84FF' }}>
+                Forgot password?
+              </span>
+            </div>
+
+            <V2FieldError>{loginError}</V2FieldError>
+
+            <button onClick={handleLogin} disabled={loginLoading}
+              className="sp-press w-full rounded-[16px] py-4 text-[15px] font-extrabold text-white mb-5"
+              style={{
+                background: '#0A84FF', boxShadow: '0 8px 24px rgba(10,132,255,0.36)',
+                opacity: loginLoading ? 0.6 : 1, letterSpacing: '-0.2px',
+              }}>
+              {loginLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                  Signing in…
+                </span>
+              ) : 'Sign In'}
+            </button>
+
+            <div className="text-center text-[13px] text-muted">
+              No account?{' '}
+              <span onClick={() => navigate('/auth/register')}
+                className="font-bold cursor-pointer" style={{ color: '#0A84FF' }}>
+                Sign up free
+              </span>
+            </div>
+          </div>
+        ) : (
+          <div className="sp-fade-up">
+            <h1 className="text-[24px] font-extrabold text-ink mb-1.5" style={{ letterSpacing: '-0.5px' }}>
+              Create your account
+            </h1>
+            <p className="text-[14px] text-muted mb-6 leading-relaxed">
+              30-day free trial — no card required.
+            </p>
+
+            <V2Field label="Email Address">
+              <V2Input type="email" placeholder="you@example.com" autoComplete="email"
+                value={regEmail} onChange={(e) => setRegEmail(e.target.value)} />
+            </V2Field>
+            <V2Field label="Password">
+              <V2PasswordInput placeholder="Create a password" autoComplete="new-password"
+                value={regPass} onChange={(e) => setRegPass(e.target.value)} />
             </V2Field>
             <V2Field label="Confirm Password">
-              <V2Input
-                type="password"
-                placeholder="Repeat password"
-                autoComplete="new-password"
-                value={regPass2}
-                onChange={(e) => setRegPass2(e.target.value)}
-              />
+              <V2Input type="password" placeholder="Repeat password" autoComplete="new-password"
+                value={regPass2} onChange={(e) => setRegPass2(e.target.value)} />
             </V2Field>
 
             <PasswordChecklist password={regPass} />
-
             <V2FieldError>{regError}</V2FieldError>
-            <div className="mt-0.5 mb-4.5">
-              <V2Button loading={regLoading} onClick={handleRegister}>
-                Continue →
-              </V2Button>
+
+            <button onClick={handleRegister} disabled={regLoading}
+              className="sp-press w-full rounded-[16px] py-4 text-[15px] font-extrabold text-white mb-4"
+              style={{
+                background: '#0A84FF', boxShadow: '0 8px 24px rgba(10,132,255,0.36)',
+                opacity: regLoading ? 0.6 : 1, letterSpacing: '-0.2px',
+              }}>
+              {regLoading ? (
+                <span className="inline-flex items-center gap-2">
+                  <span className="h-4 w-4 rounded-full border-2 border-white/40 border-t-white animate-spin" />
+                  Creating account…
+                </span>
+              ) : 'Continue →'}
+            </button>
+
+            {/* Divider */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px" style={{ background: '#EBEBED' }} />
+              <span className="text-[12px] text-muted font-medium">or continue with</span>
+              <div className="flex-1 h-px" style={{ background: '#EBEBED' }} />
             </div>
 
-            <div className="my-5.5 flex items-center gap-3 text-[13px] font-medium text-v2-text2">
-              <div className="h-px flex-1 bg-v2-border" />
-              or continue with
-              <div className="h-px flex-1 bg-v2-border" />
-            </div>
+            {/* Social */}
+            {[
+              { icon: <GoogleIcon />, label: 'Continue with Google', action: () => showToast('Google sign-in coming soon.') },
+              { icon: <AppleIcon />, label: 'Continue with Apple', action: () => showToast('Apple sign-in coming soon.') },
+            ].map((b) => (
+              <button key={b.label} onClick={b.action}
+                className="sp-press w-full flex items-center justify-center gap-2.5 rounded-[14px] py-3.5 mb-2.5 text-[14px] font-semibold text-ink"
+                style={{ background: '#fff', border: '1.5px solid #EBEBED' }}>
+                {b.icon} {b.label}
+              </button>
+            ))}
 
-            <div className="mb-3">
-              <V2Button
-                variant="secondary"
-                onClick={() => showToast('Google sign-in is coming soon.')}
-              >
-                <GoogleIcon /> Continue with Google
-              </V2Button>
-            </div>
-            <V2Button variant="secondary" onClick={() => showToast('Apple sign-in is coming soon.')}>
-              <AppleIcon /> Continue with Apple
-            </V2Button>
-
-            <div className="mt-5.5 text-center text-sm text-v2-text2">
-              Have an account?{' '}
-              <a
-                onClick={() => navigate('/auth/login')}
-                className="cursor-pointer font-bold text-v2-primary hover:underline"
-              >
+            <div className="text-center text-[13px] text-muted mt-4">
+              Already have an account?{' '}
+              <span onClick={() => navigate('/auth/login')}
+                className="font-bold cursor-pointer" style={{ color: '#0A84FF' }}>
                 Sign in
-              </a>
+              </span>
             </div>
           </div>
-        </div>
-      )}
-    </V2Screen>
+        )}
+      </div>
+    </div>
   )
 }

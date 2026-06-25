@@ -1,15 +1,15 @@
 import { useState } from 'react'
-import type { ReactNode } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
-import { createCar } from '../lib/cars'
+import { createCar, getCarsByEmail } from '../lib/cars'
+import { V2Field, V2FieldError, V2Input } from '../components/v2/V2Form'
 
-const CAR_TYPES = ['Saloon', 'SUV', 'Pickup', 'Van', 'Hatchback', 'Coupe']
+const CAR_TYPES = ['Sedan', 'SUV', 'Hatchback', 'Pickup', 'Van/Minibus', 'Truck']
+const CAR_TYPE_ICONS: Record<string, string> = { Sedan: '🚗', SUV: '🚙', Hatchback: '🚘', Pickup: '🛻', 'Van/Minibus': '🚐', Truck: '🚚' }
 
 export function AddCarScreen() {
   const navigate = useNavigate()
   const currentUser = useAppStore((s) => s.currentUser)
-  const userCars = useAppStore((s) => s.userCars)
   const setUserCars = useAppStore((s) => s.setUserCars)
   const showToast = useAppStore((s) => s.showToast)
 
@@ -17,127 +17,69 @@ export function AddCarScreen() {
   const [model, setModel] = useState('')
   const [colour, setColour] = useState('')
   const [plate, setPlate] = useState('')
-  const [carType, setCarType] = useState('')
+  const [carType, setCarType] = useState(CAR_TYPES[0])
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
   async function handleSave() {
-    if (!make.trim() || !model.trim() || !plate.trim()) {
-      setError('Make, model and plate are required.')
-      return
-    }
-    const limit = currentUser?.sub_car_limit || 1
-    if (userCars.length >= limit) {
-      setError('Car limit reached for your plan. Upgrade to add more.')
-      return
-    }
+    if (!make.trim() || !model.trim() || !plate.trim()) { setError('Make, model and plate are required.'); return }
     if (!currentUser) return
-
-    setSaving(true)
-    setError('')
+    setSaving(true); setError('')
     try {
-      const car = await createCar({
-        user_email: currentUser.email,
-        make: make.trim(),
-        model: model.trim(),
-        colour: colour.trim(),
-        plate: plate.trim().toUpperCase(),
-        car_type: carType,
-      })
-      setUserCars([...userCars, car])
-      showToast('Car added!')
-      navigate('/profile')
+      await createCar({ user_email: currentUser.email, make: make.trim(), model: model.trim(), colour: colour.trim(), plate: plate.trim().toUpperCase(), car_type: carType })
+      const cars = await getCarsByEmail(currentUser.email)
+      setUserCars(cars); showToast('Vehicle added!'); navigate('/profile')
     } catch (e) {
-      setError(e instanceof Error ? `Error: ${e.message}` : 'Something went wrong.')
-    } finally {
-      setSaving(false)
-    }
+      setError(e instanceof Error ? e.message : 'Could not save vehicle.')
+    } finally { setSaving(false) }
   }
 
   return (
-    <div className="bg-bg">
-      <div className="flex items-center gap-3 border-b border-slate-100 bg-surface-1 px-4 py-4">
-        <button
-          onClick={() => navigate('/profile')}
-          className="flex h-9 w-9 items-center justify-center rounded-full text-lg text-navy hover:bg-bg"
-        >
-          ←
-        </button>
-        <h2 className="text-base font-bold text-navy">Add a Car</h2>
+    <div className="flex h-full flex-col" style={{ background: '#F5F5F7' }}>
+      <div className="flex items-center gap-3 bg-white px-4 py-4" style={{ boxShadow: '0 1px 0 #EBEBED' }}>
+        <button onClick={() => navigate(-1)} className="sp-press flex h-9 w-9 items-center justify-center rounded-[11px] text-lg text-ink" style={{ background: '#F5F5F7' }}>←</button>
+        <div className="text-[16px] font-extrabold text-ink" style={{ letterSpacing: '-0.3px' }}>Add Vehicle</div>
       </div>
 
-      <div className="px-5 py-5">
-        <Field label="Car Make (e.g. Toyota)">
-          <input
-            type="text"
-            placeholder="Toyota"
-            value={make}
-            onChange={(e) => setMake(e.target.value)}
-            className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white px-4 py-3 text-sm text-navy outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Car Model (e.g. Vitz)">
-          <input
-            type="text"
-            placeholder="Vitz"
-            value={model}
-            onChange={(e) => setModel(e.target.value)}
-            className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white px-4 py-3 text-sm text-navy outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Car Colour">
-          <input
-            type="text"
-            placeholder="Silver"
-            value={colour}
-            onChange={(e) => setColour(e.target.value)}
-            className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white px-4 py-3 text-sm text-navy outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Number Plate">
-          <input
-            type="text"
-            placeholder="KCA 123A"
-            value={plate}
-            onChange={(e) => setPlate(e.target.value.toUpperCase())}
-            className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white px-4 py-3 text-sm uppercase text-navy outline-none focus:border-accent"
-          />
-        </Field>
-        <Field label="Car Type">
-          <select
-            value={carType}
-            onChange={(e) => setCarType(e.target.value)}
-            className="w-full rounded-2xl border-[1.5px] border-slate-200 bg-white px-4 py-3 text-sm text-navy outline-none focus:border-accent"
-          >
-            <option value="">Select type</option>
-            {CAR_TYPES.map((t) => (
-              <option key={t} value={t}>
-                {t}
-              </option>
-            ))}
-          </select>
-        </Field>
+      <div className="flex-1 overflow-y-auto px-4 pt-5 pb-32">
+        {/* Car type selector */}
+        <div className="text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-3">Vehicle Type</div>
+        <div className="grid grid-cols-3 gap-2 mb-5">
+          {CAR_TYPES.map((t) => (
+            <div key={t} onClick={() => setCarType(t)}
+              className="sp-press cursor-pointer rounded-[13px] py-3 text-center"
+              style={{ background: carType === t ? 'rgba(10,132,255,0.08)' : '#fff', border: `1.5px solid ${carType === t ? '#0A84FF' : '#EBEBED'}` }}>
+              <div className="text-xl mb-1">{CAR_TYPE_ICONS[t]}</div>
+              <div className="text-[11px] font-bold" style={{ color: carType === t ? '#0A84FF' : '#0D0D0D' }}>{t}</div>
+            </div>
+          ))}
+        </div>
 
-        {error && <div className="mb-4 text-sm text-danger">{error}</div>}
+        {/* Details */}
+        <div className="rounded-[18px] bg-white p-4 mb-3" style={{ border: '1px solid #EBEBED' }}>
+          <V2Field label="Make (e.g. Toyota)">
+            <V2Input placeholder="Toyota" value={make} onChange={(e) => setMake(e.target.value)} />
+          </V2Field>
+          <V2Field label="Model (e.g. Vitz)">
+            <V2Input placeholder="Vitz" value={model} onChange={(e) => setModel(e.target.value)} />
+          </V2Field>
+          <V2Field label="Colour">
+            <V2Input placeholder="Silver" value={colour} onChange={(e) => setColour(e.target.value)} />
+          </V2Field>
+          <V2Field label="Number Plate">
+            <V2Input placeholder="KCA 123A" value={plate} onChange={(e) => setPlate(e.target.value.toUpperCase())} className="uppercase" />
+          </V2Field>
+          <V2FieldError>{error}</V2FieldError>
+        </div>
+      </div>
 
-        <button
-          type="button"
-          disabled={saving}
-          onClick={handleSave}
-          className="w-full rounded-2xl bg-accent py-4 text-[15px] font-bold text-white shadow-app-md disabled:opacity-50"
-        >
-          {saving ? 'Please wait…' : 'Save Car'}
+      <div className="fixed bottom-0 left-0 right-0 px-4 pt-3 pb-6" style={{ background: 'rgba(245,245,247,0.96)', backdropFilter: 'blur(20px)', borderTop: '1px solid #EBEBED' }}>
+        <button onClick={handleSave} disabled={saving}
+          className="sp-press w-full rounded-[16px] py-4 text-[15px] font-extrabold text-white"
+          style={{ background: '#0A84FF', boxShadow: '0 8px 24px rgba(10,132,255,0.36)', opacity: saving ? 0.6 : 1 }}>
+          {saving ? 'Saving…' : 'Add Vehicle →'}
         </button>
       </div>
-    </div>
-  )
-}
-
-function Field({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="mb-4">
-      <label className="mb-1.5 block text-sm font-semibold text-navy">{label}</label>
-      {children}
     </div>
   )
 }
