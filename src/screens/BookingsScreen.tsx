@@ -10,9 +10,10 @@ function statusBadge(status: Booking['status']) {
   return { label: 'Upcoming', bg: 'rgba(10,132,255,0.1)', color: '#0A84FF' }
 }
 
-function BookingCard({ booking }: { booking: Booking }) {
+function BookingCard({ booking, onViewPass }: { booking: Booking; onViewPass: (id: string) => void }) {
   const badge = statusBadge(booking.status)
   const carInfo = `${booking.car_make ?? ''} ${booking.car_model ?? ''}`.trim()
+  const canViewPass = booking.status === 'confirmed'
 
   return (
     <div
@@ -56,6 +57,16 @@ function BookingCard({ booking }: { booking: Booking }) {
           </div>
         </div>
       </div>
+
+      {canViewPass && (
+        <button
+          onClick={() => onViewPass(String(booking.id))}
+          className="sp-press mt-3 w-full rounded-[12px] py-2.5 text-[13px] font-bold text-white flex items-center justify-center gap-1.5"
+          style={{ background: '#0A1628' }}
+        >
+          <span>▦</span> View Pass
+        </button>
+      )}
     </div>
   )
 }
@@ -164,7 +175,13 @@ export function BookingsScreen() {
             )}
           </div>
         ) : (
-          filtered.map((b) => <BookingCard key={b.id} booking={b} />)
+          filtered.map((b) => (
+            <BookingCard
+              key={b.id}
+              booking={b}
+              onViewPass={(id) => navigate(`/qr/${id}`)}
+            />
+          ))
         )}
       </div>
     </div>

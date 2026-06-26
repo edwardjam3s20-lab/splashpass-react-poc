@@ -56,7 +56,19 @@ export function WashMap({ points, onMarkerClick }: WashMapProps) {
     userMarkerRef.current = L.marker([userLat, userLng], { icon: userPulseIcon }).addTo(map)
     mapRef.current = map
 
+    // Leaflet measures its container at mount time; if layout above it
+    // (header, async content) shifts the container's size shortly after,
+    // tiles can be calculated for the wrong dimensions and render as gray
+    // gaps. Re-measure on the next frame and once more after a short delay
+    // to catch both cases.
+    requestAnimationFrame(() => map.invalidateSize())
+    const settleTimer = setTimeout(() => map.invalidateSize(), 250)
+    const handleResize = () => map.invalidateSize()
+    window.addEventListener('resize', handleResize)
+
     return () => {
+      clearTimeout(settleTimer)
+      window.removeEventListener('resize', handleResize)
       map.remove()
       mapRef.current = null
     }

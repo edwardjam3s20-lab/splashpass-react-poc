@@ -108,7 +108,7 @@ function App() {
             }
           />
           <Route
-            path="/qr"
+            path="/qr/:bookingId?"
             element={
               <RequireAuth>
                 <QRScreen />

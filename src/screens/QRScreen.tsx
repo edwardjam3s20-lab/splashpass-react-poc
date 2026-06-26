@@ -1,31 +1,97 @@
-import { useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams } from 'react-router-dom'
 import { QRCodeSVG } from 'qrcode.react'
 import { useAppStore } from '../store/useAppStore'
+import { getBookingById } from '../lib/bookings'
+import type { Booking } from '../types/database'
 
 export function QRScreen() {
   const navigate = useNavigate()
+  const { bookingId } = useParams<{ bookingId?: string }>()
   const currentUser = useAppStore((s) => s.currentUser)
   const pendingBooking = useAppStore((s) => s.pendingBooking)
   const resetBookingFlow = useAppStore((s) => s.resetBookingFlow)
 
+  // When revisiting via /qr/:bookingId, fetch that booking fresh from the
+  // database — it's already persisted there (booking_code included), so it
+  // survives navigation/refresh even though pendingBooking does not.
+  const [fetchedBooking, setFetchedBooking] = useState<Booking | null>(null)
+  const [isLoading, setIsLoading] = useState(!!bookingId)
+  const [notFound, setNotFound] = useState(false)
+
   useEffect(() => {
-    if (!pendingBooking || !currentUser) navigate('/home', { replace: true })
-  }, [pendingBooking, currentUser, navigate])
+    if (!bookingId) return
+    let cancelled = false
+    getBookingById(bookingId)
+      .then((b) => {
+        if (cancelled) return
+        if (!b) setNotFound(true)
+        else setFetchedBooking(b)
+      })
+      .catch(() => { if (!cancelled) setNotFound(true) })
+      .finally(() => { if (!cancelled) setIsLoading(false) })
+    return () => { cancelled = true }
+  }, [bookingId])
 
-  if (!pendingBooking || !currentUser) return null
+  // Resolve to a single shape regardless of source
+  const booking = bookingId ? fetchedBooking : pendingBooking?.booking ?? null
+  const code = bookingId ? fetchedBooking?.booking_code : pendingBooking?.code
+  const date = bookingId ? fetchedBooking?.date : pendingBooking?.date
 
-  const { booking, code, date } = pendingBooking
+  useEffect(() => {
+    if (isLoading) return
+    if (!currentUser) { navigate('/home', { replace: true }); return }
+    if (!booking) { navigate(bookingId ? '/bookings' : '/home', { replace: true }) }
+  }, [isLoading, currentUser, booking, bookingId, navigate])
+
+  if (isLoading) {
+    return (
+      <div className="flex h-full items-center justify-center bg-white">
+        <div className="sp-skeleton h-8 w-8 rounded-full" />
+      </div>
+    )
+  }
+
+  if (notFound) {
+    return (
+      <div className="flex h-full flex-col items-center justify-center bg-white px-5 text-center">
+        <div className="text-4xl mb-3">🔍</div>
+        <div className="text-[15px] font-bold text-ink mb-1">Booking not found</div>
+        <div className="text-[13px] text-muted mb-4">This booking may have been removed.</div>
+        <button onClick={() => navigate('/bookings')}
+          className="sp-press rounded-[11px] px-4 py-2.5 text-[13px] font-bold text-white"
+          style={{ background: '#0A84FF' }}>
+          Back to Bookings
+        </button>
+      </div>
+    )
+  }
+
+  if (!booking || !currentUser || !code) return null
+
   const carInfo = `${booking.car_make ?? ''} ${booking.car_model ?? ''}`.trim()
   const qrData = JSON.stringify({
     id: booking.id, user: currentUser.name,
     point: booking.location, date, time: booking.time, code,
   })
 
-  function handleDone() { resetBookingFlow(); navigate('/bookings') }
+  function handleDone() {
+    resetBookingFlow()
+    navigate('/bookings')
+  }
 
   return (
     <div className="flex h-full flex-col items-center bg-white overflow-y-auto px-5 pt-6 pb-8">
+      {bookingId && (
+        <button
+          onClick={() => navigate('/bookings')}
+          className="sp-press self-start flex h-9 w-9 items-center justify-center rounded-[11px] text-lg text-ink mb-3"
+          style={{ background: '#F5F5F7' }}
+        >
+          ←
+        </button>
+      )}
+
       <div className="text-[22px] font-extrabold text-ink mb-1 text-center" style={{ letterSpacing: '-0.5px' }}>
         Your Wash Pass
       </div>
@@ -81,11 +147,13 @@ export function QRScreen() {
         ))}
       </div>
 
-      <button onClick={handleDone}
-        className="sp-press w-full rounded-[16px] py-4 text-[15px] font-bold text-ink"
-        style={{ background: '#F5F5F7', border: '1px solid #EBEBED' }}>
-        Done — Back to Home
-      </button>
+      {!bookingId && (
+        <button onClick={handleDone}
+          className="sp-press w-full rounded-[16px] py-4 text-[15px] font-bold text-ink"
+          style={{ background: '#F5F5F7', border: '1px solid #EBEBED' }}>
+          Done — Back to Bookings
+        </button>
+      )}
     </div>
   )
 }

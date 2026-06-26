@@ -17,6 +17,12 @@ export async function getBookingsByEmail(email: string): Promise<Booking[]> {
   return data as Booking[]
 }
 
+export async function getBookingById(id: string): Promise<Booking | null> {
+  const { data, error } = await supabase.from('bookings').select('*').eq('id', id).maybeSingle()
+  if (error) throw error
+  return (data as Booking) ?? null
+}
+
 export async function createBooking(
   booking: Omit<Booking, 'id' | 'created_at'>
 ): Promise<Booking> {
