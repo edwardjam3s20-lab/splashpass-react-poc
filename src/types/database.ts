@@ -72,10 +72,11 @@ export interface Booking {
   id: string
   user_email: string
   user_name: string
+  user_phone?: string | null
   date: string
   time: string
   location: string
-  status: 'confirmed' | 'completed' | 'cancelled'
+  status: 'pending' | 'accepted' | 'rejected' | 'confirmed' | 'completed' | 'cancelled'
   car_plate: string
   car_type: string
   car_make: string
@@ -90,6 +91,9 @@ export interface Booking {
   booking_type: 'trial' | 'subscription'
   booking_code: string
   payment_status?: 'pending' | 'paid'
+  accepted_at?: string | null
+  rejected_at?: string | null
+  rejection_reason?: string | null
   created_at?: string
 }
 

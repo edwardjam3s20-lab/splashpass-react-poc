@@ -5,7 +5,8 @@ import { useAppStore } from '../store/useAppStore'
 import { useWashPoints } from '../hooks/useWashPoints'
 import { useFullSlots } from '../hooks/useFullSlots'
 import { calculateBookingCost, SLOTS } from '../lib/bookingCost'
-import { createBooking, splitWashPrice } from '../lib/bookings'
+import { createBooking, splitWashPrice, generateUniqueBookingCode } from '../lib/bookings'
+import { sendBookingRequestSms } from '../lib/mpesa'
 import { isOnTrial, hasActiveAccess } from '../lib/access'
 import { StepBar } from '../components/ui'
 
@@ -76,14 +77,17 @@ export function BookScreen() {
     setSubmitting(true)
     try {
       const split = splitWashPrice(cost.washPrice, point.commission_tier)
-      const code = 'SP' + Math.random().toString(36).substring(2, 8).toUpperCase()
+      const code = await generateUniqueBookingCode()
       const booking = await createBooking({
         user_email: currentUser.email,
         user_name: currentUser.name,
+        user_phone: currentUser.phone ?? null,
         date,
         time: bookingSlot,
         location: point.name,
-        status: 'confirmed',
+        // Booking now starts as a request awaiting operator approval —
+        // payment only happens after they accept (see PendingApprovalScreen).
+        status: 'pending',
         car_plate: bookingCar.plate,
         car_type: bookingCar.car_type,
         car_make: bookingCar.make,
@@ -100,7 +104,10 @@ export function BookScreen() {
       })
       setPendingBooking({ booking, code, date })
       queryClient.invalidateQueries({ queryKey: ['bookings-by-date', date] })
-      navigate('/mpesa/booking')
+      if (currentUser.phone) {
+        sendBookingRequestSms(currentUser.phone, point.name, date, bookingSlot)
+      }
+      navigate(`/booking-pending/${booking.id}`)
     } catch (e) {
       showToast(e instanceof Error ? `Booking failed: ${e.message}` : 'Booking failed.', true)
     } finally {

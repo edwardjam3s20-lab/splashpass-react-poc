@@ -9,6 +9,7 @@ import { HomeScreen } from './screens/HomeScreen'
 import { DiscoveryScreen } from './screens/DiscoveryScreen'
 import { BookingsScreen } from './screens/BookingsScreen'
 import { BookScreen } from './screens/BookScreen'
+import { PendingApprovalScreen } from './screens/PendingApprovalScreen'
 import { MpesaBookingScreen } from './screens/MpesaBookingScreen'
 import { MpesaSubscriptionScreen } from './screens/MpesaSubscriptionScreen'
 import { BookingConfirmedScreen } from './screens/BookingConfirmedScreen'
@@ -80,6 +81,14 @@ function App() {
             element={
               <RequireAuth>
                 <BookScreen />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/booking-pending/:bookingId"
+            element={
+              <RequireAuth>
+                <PendingApprovalScreen />
               </RequireAuth>
             }
           />

@@ -70,10 +70,11 @@ export function QRScreen() {
   if (!booking || !currentUser || !code) return null
 
   const carInfo = `${booking.car_make ?? ''} ${booking.car_model ?? ''}`.trim()
-  const qrData = JSON.stringify({
-    id: booking.id, user: currentUser.name,
-    point: booking.location, date, time: booking.time, code,
-  })
+  // The operator's scanner only ever reads `id` (looks the booking up fresh
+  // server-side from there) — encoding name/location/date too just bloats
+  // the payload, forcing a denser QR matrix that's markedly harder for a
+  // phone camera to resolve at small print/screen sizes. Keep it minimal.
+  const qrData = JSON.stringify({ id: booking.id })
 
   function handleDone() {
     resetBookingFlow()
@@ -116,7 +117,7 @@ export function QRScreen() {
 
         <div className="flex justify-center mb-4">
           <div className="rounded-[16px] p-3" style={{ background: '#F5F5F7' }}>
-            <QRCodeSVG value={qrData} size={160} fgColor="#0A1628" bgColor="transparent" />
+            <QRCodeSVG value={qrData} size={200} level="H" fgColor="#0A1628" bgColor="transparent" />
           </div>
         </div>
 
