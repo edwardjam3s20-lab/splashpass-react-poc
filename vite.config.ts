@@ -9,6 +9,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // injectManifest (not generateSW) is required for a custom push
+      // event listener — see src/sw.ts. Mirrors the operator app's setup,
+      // built when push notifications were added there; this app never
+      // needed push until now.
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
       registerType: 'autoUpdate',
       includeAssets: ['icon.svg'],
       manifest: {
@@ -25,7 +32,7 @@ export default defineConfig({
           },
         ],
       },
-      workbox: {
+      injectManifest: {
         globPatterns: ['**/*.{js,css,html,svg,png,ico}'],
       },
     }),

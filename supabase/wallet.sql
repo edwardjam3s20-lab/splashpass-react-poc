@@ -15,7 +15,7 @@ create table if not exists wallet_transactions (
   amount numeric(10,2) not null,
   type text not null check (type in ('topup', 'booking_payment', 'points_conversion', 'refund')),
   status text not null default 'completed' check (status in ('pending', 'completed', 'failed')),
-  booking_id uuid references bookings(id) on delete set null,
+  booking_id bigint references bookings(id) on delete set null,
   points_spent integer,
   mpesa_receipt text,
   created_at timestamptz not null default now()

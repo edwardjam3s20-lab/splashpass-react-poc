@@ -17,7 +17,7 @@ create table if not exists pending_transactions (
   purpose text not null check (purpose in ('subscription', 'booking_payment', 'wallet_topup')),
   user_email text not null,
   amount numeric(10,2) not null,
-  booking_id uuid references bookings(id) on delete set null,
+  booking_id bigint references bookings(id) on delete set null,
   status text not null default 'pending' check (status in ('pending', 'completed', 'failed')),
   created_at timestamptz not null default now()
 );

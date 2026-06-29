@@ -4,6 +4,7 @@ import { useAppStore } from '../store/useAppStore'
 import { getCarsByEmail, deleteCarRow } from '../lib/cars'
 import { getTrialDaysLeft, isOnTrial } from '../lib/access'
 import { getTier } from '../lib/loyalty'
+import { getPushSupport, isSubscribedToReminders, subscribeToReminders, unsubscribeFromReminders, type PushSupport } from '../lib/reminders'
 
 function carEmoji(carType: string) {
   if (carType === 'SUV') return '🚙'
@@ -18,6 +19,39 @@ export function ProfileScreen() {
   const setUserCars = useAppStore((s) => s.setUserCars)
   const logout = useAppStore((s) => s.logout)
   const showToast = useAppStore((s) => s.showToast)
+
+  const [pushSupport, setPushSupport] = useState<PushSupport>('default')
+  const [remindersOn, setRemindersOn] = useState(false)
+  const [togglingReminders, setTogglingReminders] = useState(false)
+
+  useEffect(() => {
+    setPushSupport(getPushSupport())
+    isSubscribedToReminders().then(setRemindersOn)
+  }, [])
+
+  async function handleEnableReminders() {
+    if (!currentUser?.email) return
+    setTogglingReminders(true)
+    try {
+      const result = await subscribeToReminders(currentUser.email)
+      showToast(result.message, !result.ok)
+      setPushSupport(getPushSupport())
+      setRemindersOn(await isSubscribedToReminders())
+    } finally {
+      setTogglingReminders(false)
+    }
+  }
+
+  async function handleDisableReminders() {
+    setTogglingReminders(true)
+    try {
+      await unsubscribeFromReminders()
+      showToast('Booking reminders turned off.')
+      setRemindersOn(false)
+    } finally {
+      setTogglingReminders(false)
+    }
+  }
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -215,6 +249,40 @@ export function ProfileScreen() {
                 </div>
               )}
             </>
+          )}
+        </div>
+
+        {/* ── Booking reminders ── */}
+        <div className="mb-4 flex items-center gap-3 rounded-[16px] p-3.5"
+          style={{ background: '#fff', border: '1px solid #EBEBED', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] text-lg"
+            style={{ background: '#E0FAF9' }}>
+            🔔
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-bold text-ink">Booking Reminders</div>
+            <div className="text-[11px] text-muted mt-0.5">
+              {pushSupport === 'unsupported'
+                ? 'Not supported on this browser.'
+                : pushSupport === 'denied'
+                ? 'Blocked — enable in browser settings.'
+                : remindersOn
+                ? 'You\u2019ll get a reminder the day before and 30 min before.'
+                : 'Get reminded before your wash.'}
+            </div>
+          </div>
+          {pushSupport !== 'unsupported' && pushSupport !== 'denied' && (
+            <button
+              onClick={remindersOn ? handleDisableReminders : handleEnableReminders}
+              disabled={togglingReminders}
+              className="sp-press flex-shrink-0 rounded-[10px] px-3.5 py-2 text-[12px] font-bold disabled:opacity-50"
+              style={{
+                background: remindersOn ? '#F5F5F7' : '#0A84FF',
+                color: remindersOn ? '#0D0D0D' : '#fff',
+              }}
+            >
+              {togglingReminders ? '…' : remindersOn ? 'Turn off' : 'Enable'}
+            </button>
           )}
         </div>
 
