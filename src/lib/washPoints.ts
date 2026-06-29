@@ -28,6 +28,8 @@ export async function fetchWashPoints(): Promise<WashPoint[]> {
     status: r.status ?? 'open',
     services: servicesByPoint.filter((s) => s.wash_point_id === r.id),
     commission_tier: r.commission_tier != null ? Number(r.commission_tier) : 1,
+    opens_at: r.opens_at ?? '07:00',
+    closes_at: r.closes_at ?? '21:00',
   }))
 }
 

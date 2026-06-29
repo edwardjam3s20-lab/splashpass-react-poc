@@ -5,6 +5,8 @@ import { getCarsByEmail } from '../lib/cars'
 import { getTrialDaysLeft, isOnTrial } from '../lib/access'
 import { getTier } from '../lib/loyalty'
 import { getBookingsByEmail } from '../lib/bookings'
+import { isBookingMissed } from '../lib/bookingCost'
+import { fetchWalletStatus } from '../lib/wallet'
 import type { Booking } from '../types/database'
 
 function greeting() {
@@ -58,6 +60,11 @@ function QuickAction({
 function statusBadge(b: Booking) {
   if (b.status === 'completed') return { label: 'Completed', bg: 'rgba(48,209,88,0.12)', color: '#1F8A41' }
   if (b.status === 'cancelled') return { label: 'Cancelled', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
+  if (b.status === 'rejected') return { label: 'Declined', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
+  if (b.status === 'pending') return { label: 'Pending', bg: 'rgba(255,159,10,0.12)', color: '#B25A00' }
+  if (isBookingMissed(b.date, b.time, b.status)) {
+    return { label: 'Missed', bg: 'rgba(174,174,178,0.18)', color: '#6E6E73' }
+  }
   return { label: 'Upcoming', bg: 'rgba(10,132,255,0.1)', color: '#0A84FF' }
 }
 
@@ -67,6 +74,14 @@ export function HomeScreen() {
   const setUserCars = useAppStore((s) => s.setUserCars)
   const [recentBooking, setRecentBooking] = useState<Booking | null>(null)
   const [loadingBooking, setLoadingBooking] = useState(!!currentUser?.email)
+  const [walletBalance, setWalletBalance] = useState<number | null>(currentUser?.wallet_balance ?? null)
+
+  useEffect(() => {
+    if (!currentUser?.email) return
+    fetchWalletStatus().then((status) => {
+      if (status) setWalletBalance(status.balance)
+    })
+  }, [currentUser])
 
   useEffect(() => {
     if (!currentUser) return
@@ -160,6 +175,36 @@ export function HomeScreen() {
               Upgrade — Remove fee →
             </button>
           )}
+        </div>
+
+        {/* Wallet card */}
+        <div
+          onClick={() => navigate('/wallet')}
+          className="sp-press mt-3 flex cursor-pointer items-center gap-3 rounded-[16px] p-3.5"
+          style={{ background: '#fff', border: '1px solid #EBEBED', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}
+        >
+          <div
+            className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] text-lg"
+            style={{ background: '#E0FAF9' }}
+          >
+            👛
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[11px] text-muted">Wallet Balance</div>
+            <div className="text-[18px] font-extrabold text-ink leading-tight" style={{ letterSpacing: '-0.3px' }}>
+              {walletBalance == null ? (
+                <span className="sp-skeleton inline-block h-5 w-20 rounded" />
+              ) : (
+                `KSh ${walletBalance.toLocaleString()}`
+              )}
+            </div>
+          </div>
+          <div
+            className="flex-shrink-0 rounded-[10px] px-3 py-1.5 text-[12px] font-bold text-white"
+            style={{ background: '#0A84FF' }}
+          >
+            Top Up
+          </div>
         </div>
       </div>
 

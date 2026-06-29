@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
 import { triggerStkPush } from '../lib/mpesa'
+import { fetchWalletStatus, payBookingFromWallet } from '../lib/wallet'
 import { useBookingPaymentPoll } from '../hooks/useBookingPaymentPoll'
 
 type StatusKind = 'idle' | 'pending' | 'success' | 'error'
@@ -19,6 +20,13 @@ export function MpesaBookingScreen() {
   const [paying, setPaying] = useState(false)
   const [pollEnabled, setPollEnabled] = useState(false)
   const [manualConfirmAvailable, setManualConfirmAvailable] = useState(false)
+  const [method, setMethod] = useState<'mpesa' | 'wallet'>('mpesa')
+  const [walletBalance, setWalletBalance] = useState<number | null>(null)
+  const [walletPaying, setWalletPaying] = useState(false)
+
+  useEffect(() => {
+    fetchWalletStatus().then((s) => { if (s) setWalletBalance(s.balance) })
+  }, [])
 
   const { isPaid, timedOut } = useBookingPaymentPoll(pendingBooking?.booking.id, pollEnabled)
 
@@ -61,6 +69,23 @@ export function MpesaBookingScreen() {
     } catch (e) {
       setStatus('error'); setStatusText(e instanceof Error ? `Error: ${e.message}` : 'Something went wrong.')
     } finally { setPaying(false) }
+  }
+
+  async function handleWalletPay() {
+    setWalletPaying(true)
+    try {
+      const result = await payBookingFromWallet(booking.id, booking.total_amount)
+      if (!result.ok) {
+        showToast(result.error || 'Wallet payment failed', true)
+        return
+      }
+      setWalletBalance(result.balance ?? null)
+      setStatus('success'); setStatusText('Payment confirmed!')
+      showToast('Paid from wallet!')
+      setTimeout(() => navigate('/confirmed'), 1000)
+    } finally {
+      setWalletPaying(false)
+    }
   }
 
   function handleManualConfirm() {
@@ -111,51 +136,112 @@ export function MpesaBookingScreen() {
           </div>
         </div>
 
-        {/* Phone input */}
-        <div className="mb-4">
-          <label className="block text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-2">
-            M-Pesa Phone Number
-          </label>
-          <input
-            type="tel"
-            placeholder="0712 345 678"
-            value={phone}
-            onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-[14px] px-4 py-3.5 text-[15px] font-semibold text-ink bg-white outline-none"
-            style={{ border: '1.5px solid #EBEBED' }}
-          />
+        {/* Payment method toggle */}
+        <div className="flex rounded-[14px] p-1 mb-4" style={{ background: '#EBEBED' }}>
+          {(['mpesa', 'wallet'] as const).map((m) => (
+            <button
+              key={m}
+              onClick={() => setMethod(m)}
+              className="flex-1 rounded-[11px] py-2.5 text-[13px] font-bold transition-colors duration-150"
+              style={{
+                background: method === m ? '#fff' : 'transparent',
+                color: method === m ? '#0D0D0D' : '#6E6E73',
+                boxShadow: method === m ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
+              }}
+            >
+              {m === 'mpesa' ? '📱 M-Pesa' : `👛 Wallet`}
+            </button>
+          ))}
         </div>
 
-        {/* Status message */}
-        {status !== 'idle' && (
-          <div className="rounded-[14px] px-4 py-3 mb-4 text-[14px] font-medium flex items-center gap-2"
-            style={{ background: statusBg[status], color: statusTextColor[status] }}>
-            {status === 'pending' && <span>⏳</span>}
-            {status === 'success' && <span>✅</span>}
-            {status === 'error' && <span>⚠️</span>}
-            {statusText}
-          </div>
+        {method === 'wallet' ? (
+          <>
+            <div className="rounded-[16px] bg-white p-4 mb-4" style={{ border: '1px solid #EBEBED' }}>
+              <div className="flex items-center justify-between">
+                <span className="text-[13px] text-muted">Wallet Balance</span>
+                <span className="text-[16px] font-extrabold text-ink">
+                  {walletBalance == null ? '···' : `KSh ${walletBalance.toLocaleString()}`}
+                </span>
+              </div>
+              {walletBalance != null && walletBalance < booking.total_amount && (
+                <div className="mt-2.5 rounded-[10px] px-3 py-2 text-[12px]" style={{ background: '#FFF0EE', color: '#CC2222' }}>
+                  Not enough balance. Top up KSh {(booking.total_amount - walletBalance).toLocaleString()} more, or pay via M-Pesa.
+                </div>
+              )}
+            </div>
+
+            <button
+              onClick={handleWalletPay}
+              disabled={walletPaying || status === 'success' || walletBalance == null || walletBalance < booking.total_amount}
+              className="sp-press w-full rounded-[16px] py-4 mb-3 text-[15px] font-extrabold text-white"
+              style={{
+                background: '#0A84FF',
+                boxShadow: '0 8px 24px rgba(10,132,255,0.36)',
+                opacity: walletPaying || status === 'success' || walletBalance == null || walletBalance < booking.total_amount ? 0.5 : 1,
+              }}
+            >
+              {walletPaying ? 'Processing…' : `Pay KSh ${booking.total_amount.toLocaleString()} from Wallet`}
+            </button>
+            {walletBalance != null && walletBalance < booking.total_amount && (
+              <button
+                onClick={() => navigate('/wallet')}
+                className="sp-press w-full rounded-[16px] py-3.5 mb-3 text-[14px] font-bold"
+                style={{ border: '1.5px solid #0A84FF', color: '#0A84FF', background: 'rgba(10,132,255,0.06)' }}
+              >
+                Top Up Wallet
+              </button>
+            )}
+          </>
+        ) : (
+          <>
+            {/* Phone input */}
+            <div className="mb-4">
+              <label className="block text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-2">
+                M-Pesa Phone Number
+              </label>
+              <input
+                type="tel"
+                placeholder="0712 345 678"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
+                className="w-full rounded-[14px] px-4 py-3.5 text-[15px] font-semibold text-ink bg-white outline-none"
+                style={{ border: '1.5px solid #EBEBED' }}
+              />
+            </div>
+
+            {/* Status message */}
+            {status !== 'idle' && (
+              <div className="rounded-[14px] px-4 py-3 mb-4 text-[14px] font-medium flex items-center gap-2"
+                style={{ background: statusBg[status], color: statusTextColor[status] }}>
+                {status === 'pending' && <span>⏳</span>}
+                {status === 'success' && <span>✅</span>}
+                {status === 'error' && <span>⚠️</span>}
+                {statusText}
+              </div>
+            )}
+
+            {manualConfirmAvailable && (
+              <button onClick={handleManualConfirm}
+                className="sp-press w-full rounded-[14px] py-3.5 mb-3 text-[14px] font-bold"
+                style={{ border: '1.5px solid #0A84FF', color: '#0A84FF', background: 'rgba(10,132,255,0.06)' }}>
+                ✓ I've paid — get my wash pass
+              </button>
+            )}
+
+            <button
+              onClick={handlePay}
+              disabled={paying || status === 'success'}
+              className="sp-press w-full rounded-[16px] py-4 mb-3 text-[15px] font-extrabold text-white"
+              style={{
+                background: '#0A84FF',
+                boxShadow: '0 8px 24px rgba(10,132,235,0.36)',
+                opacity: paying || status === 'success' ? 0.5 : 1,
+              }}>
+              {paying ? 'Please wait…' : 'Pay Now'}
+            </button>
+          </>
         )}
 
-        {manualConfirmAvailable && (
-          <button onClick={handleManualConfirm}
-            className="sp-press w-full rounded-[14px] py-3.5 mb-3 text-[14px] font-bold"
-            style={{ border: '1.5px solid #0A84FF', color: '#0A84FF', background: 'rgba(10,132,255,0.06)' }}>
-            ✓ I've paid — get my wash pass
-          </button>
-        )}
-
-        <button
-          onClick={handlePay}
-          disabled={paying || status === 'success'}
-          className="sp-press w-full rounded-[16px] py-4 mb-3 text-[15px] font-extrabold text-white"
-          style={{
-            background: '#0A84FF',
-            boxShadow: '0 8px 24px rgba(10,132,255,0.36)',
-            opacity: paying || status === 'success' ? 0.5 : 1,
-          }}>
-          {paying ? 'Please wait…' : 'Pay Now'}
-        </button>
         <button onClick={handleBack}
           className="sp-press w-full rounded-[16px] py-4 text-[15px] font-bold text-ink"
           style={{ background: '#F5F5F7', border: '1px solid #EBEBED' }}>

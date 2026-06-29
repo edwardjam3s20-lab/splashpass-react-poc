@@ -3,11 +3,23 @@ export interface StkPushResult {
   message?: string
 }
 
-export async function triggerStkPush(phone: string, amount: number): Promise<StkPushResult> {
+export interface StkPushOptions {
+  purpose?: 'subscription' | 'booking_payment' | 'wallet_topup'
+  email?: string
+  bookingId?: string
+  accountReference?: string
+  transactionDesc?: string
+}
+
+export async function triggerStkPush(
+  phone: string,
+  amount: number,
+  options?: StkPushOptions
+): Promise<StkPushResult> {
   const res = await fetch('/api/mpesa-stk', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ phone, amount }),
+    body: JSON.stringify({ phone, amount, ...options }),
   })
   return res.json()
 }

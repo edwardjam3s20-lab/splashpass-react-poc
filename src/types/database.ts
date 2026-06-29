@@ -21,6 +21,8 @@ export interface WashPointRow {
   image_url: string | null
   status: 'open' | 'paused' | null
   commission_tier: number | null
+  opens_at: string | null
+  closes_at: string | null
 }
 
 // Shape used throughout the app once raw rows are normalized
@@ -35,6 +37,8 @@ export interface WashPoint {
   status: 'open' | 'paused'
   services: WashPointExtra[]
   commission_tier: number
+  opens_at: string
+  closes_at: string
   /** populated client-side once we know the user's location */
   dist?: number
 }
@@ -52,6 +56,7 @@ export interface Profile {
   sub_start?: string | null
   loyalty_points?: number | null
   loyalty_tier?: string | null
+  wallet_balance?: number | null
   /** present only transiently in RPC responses — always stripped before storing */
   password?: string
   role?: 'customer' | 'operator'

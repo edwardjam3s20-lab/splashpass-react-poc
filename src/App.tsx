@@ -10,6 +10,7 @@ import { DiscoveryScreen } from './screens/DiscoveryScreen'
 import { BookingsScreen } from './screens/BookingsScreen'
 import { BookScreen } from './screens/BookScreen'
 import { PendingApprovalScreen } from './screens/PendingApprovalScreen'
+import { WalletScreen } from './screens/WalletScreen'
 import { MpesaBookingScreen } from './screens/MpesaBookingScreen'
 import { MpesaSubscriptionScreen } from './screens/MpesaSubscriptionScreen'
 import { BookingConfirmedScreen } from './screens/BookingConfirmedScreen'
@@ -65,6 +66,14 @@ function App() {
             element={
               <RequireAuth>
                 <PlansScreen />
+              </RequireAuth>
+            }
+          />
+          <Route
+            path="/wallet"
+            element={
+              <RequireAuth>
+                <WalletScreen />
               </RequireAuth>
             }
           />

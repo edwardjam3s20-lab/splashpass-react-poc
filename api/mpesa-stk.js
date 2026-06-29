@@ -5,6 +5,14 @@ const PASSKEY = process.env.MPESA_PASSKEY;
 const CALLBACK_URL = process.env.MPESA_CALLBACK_URL || 'https://splashmain.vercel.app/api/mpesa-callback';
 const MPESA_BASE = process.env.MPESA_BASE_URL || 'https://sandbox.safaricom.co.ke';
 
+// Used only to write the pending_transactions row right after a
+// successful STK push response — same project, same table the callback
+// (in splashmain) reads from. This is the customer app's own lightweight
+// api/ folder, so it talks to Supabase directly here rather than via
+// splashmain, consistent with how this file already worked before.
+const SUPABASE_URL = process.env.SUPABASE_URL;
+const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
 async function getAccessToken() {
   const credentials = Buffer.from(CONSUMER_KEY + ':' + CONSUMER_SECRET).toString('base64');
   const res = await fetch(MPESA_BASE + '/oauth/v1/generate?grant_type=client_credentials', {
@@ -26,8 +34,42 @@ function getTimestamp() {
     pad(now.getSeconds());
 }
 
+// Best-effort — if this write fails, the STK push has already been sent
+// to the customer's phone and can't be un-sent, so we still return success
+// to the client. The callback falling back to "purpose unknown" for an
+// untagged push (see mpesa-callback.js) is the safety net for that case,
+// not a silent failure.
+async function recordPendingTransaction({ checkoutRequestId, purpose, email, amount, bookingId }) {
+  if (!SUPABASE_URL || !SUPABASE_SERVICE_KEY) {
+    console.error('pending_transactions write skipped: Supabase service env vars not configured');
+    return;
+  }
+  try {
+    const res = await fetch(`${SUPABASE_URL}/rest/v1/pending_transactions`, {
+      method: 'POST',
+      headers: {
+        apikey: SUPABASE_SERVICE_KEY,
+        Authorization: `Bearer ${SUPABASE_SERVICE_KEY}`,
+        'Content-Type': 'application/json',
+        Prefer: 'return=minimal',
+      },
+      body: JSON.stringify({
+        checkout_request_id: checkoutRequestId,
+        purpose,
+        user_email: email,
+        amount,
+        booking_id: bookingId || null,
+      }),
+    });
+    if (!res.ok) {
+      console.error('pending_transactions insert failed:', res.status, await res.text());
+    }
+  } catch (e) {
+    console.error('pending_transactions insert error:', e.message);
+  }
+}
+
 export default async function handler(req, res) {
-  // Allow CORS from your Vercel frontend
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -41,7 +83,18 @@ export default async function handler(req, res) {
   }
 
   try {
-    const { phone, amount } = req.body;
+    const {
+      phone,
+      amount,
+      // New, optional fields — existing callers (subscription flow) that
+      // don't pass these keep working exactly as before; the callback
+      // treats an untagged push the same way it always has.
+      purpose,       // 'subscription' | 'booking_payment' | 'wallet_topup'
+      email,
+      bookingId,
+      accountReference,
+      transactionDesc,
+    } = req.body;
 
     if (!phone || !amount) {
       return res.status(400).json({ message: 'Phone and amount are required' });
@@ -73,14 +126,27 @@ export default async function handler(req, res) {
         PartyB: SHORTCODE,
         PhoneNumber: normalised,
         CallBackURL: CALLBACK_URL,
-        AccountReference: 'SplashPass',
-        TransactionDesc: 'SplashPass Subscription'
+        AccountReference: accountReference || 'SplashPass',
+        TransactionDesc: transactionDesc || 'SplashPass Subscription'
       })
     });
 
     const stkData = await stkRes.json();
 
     if (stkData.ResponseCode === '0') {
+      // Tag this push so the callback knows what to do when the result
+      // arrives. Only written when a purpose was actually specified —
+      // existing callers that don't pass one behave exactly as before.
+      if (purpose && email) {
+        await recordPendingTransaction({
+          checkoutRequestId: stkData.CheckoutRequestID,
+          purpose,
+          email,
+          amount,
+          bookingId,
+        });
+      }
+
       return res.status(200).json({
         success: true,
         message: 'STK Push sent. Check your phone.',

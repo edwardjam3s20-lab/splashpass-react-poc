@@ -4,16 +4,23 @@ import { useAppStore } from '../store/useAppStore'
 import { getBookingsByEmail } from '../lib/bookings'
 import type { Booking } from '../types/database'
 
-function statusBadge(status: Booking['status']) {
-  if (status === 'completed') return { label: 'Completed', bg: 'rgba(48,209,88,0.12)', color: '#1F8A41' }
-  if (status === 'cancelled') return { label: 'Cancelled', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
+import { isBookingMissed } from '../lib/bookingCost'
+
+function statusBadge(booking: Booking) {
+  if (booking.status === 'completed') return { label: 'Completed', bg: 'rgba(48,209,88,0.12)', color: '#1F8A41' }
+  if (booking.status === 'cancelled') return { label: 'Cancelled', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
+  if (booking.status === 'rejected') return { label: 'Declined', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
+  if (booking.status === 'pending') return { label: 'Pending', bg: 'rgba(255,159,10,0.12)', color: '#B25A00' }
+  if (isBookingMissed(booking.date, booking.time, booking.status)) {
+    return { label: 'Missed', bg: 'rgba(174,174,178,0.18)', color: '#6E6E73' }
+  }
   return { label: 'Upcoming', bg: 'rgba(10,132,255,0.1)', color: '#0A84FF' }
 }
 
 function BookingCard({ booking, onViewPass }: { booking: Booking; onViewPass: (id: string) => void }) {
-  const badge = statusBadge(booking.status)
+  const badge = statusBadge(booking)
   const carInfo = `${booking.car_make ?? ''} ${booking.car_model ?? ''}`.trim()
-  const canViewPass = booking.status === 'confirmed'
+  const canViewPass = booking.status === 'confirmed' && !isBookingMissed(booking.date, booking.time, booking.status)
 
   return (
     <div
@@ -86,11 +93,12 @@ function SkeletonCard() {
   )
 }
 
-type FilterKey = 'all' | 'upcoming' | 'completed' | 'cancelled'
+type FilterKey = 'all' | 'upcoming' | 'missed' | 'completed' | 'cancelled'
 
 const FILTERS: { key: FilterKey; label: string }[] = [
   { key: 'all', label: 'All' },
   { key: 'upcoming', label: 'Upcoming' },
+  { key: 'missed', label: 'Missed' },
   { key: 'completed', label: 'Completed' },
   { key: 'cancelled', label: 'Cancelled' },
 ]
@@ -114,7 +122,13 @@ export function BookingsScreen() {
     return () => { cancelled = true }
   }, [currentUser])
 
-  const filtered = bookings.filter((b) => filter === 'all' || b.status === filter)
+  const filtered = bookings.filter((b) => {
+    if (filter === 'all') return true
+    const missed = isBookingMissed(b.date, b.time, b.status)
+    if (filter === 'upcoming') return (b.status === 'accepted' || b.status === 'confirmed') && !missed
+    if (filter === 'missed') return missed
+    return b.status === filter
+  })
 
   return (
     <div style={{ background: '#F5F5F7', minHeight: '100%', paddingBottom: 100 }}>

@@ -4,7 +4,7 @@ import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '../store/useAppStore'
 import { useWashPoints } from '../hooks/useWashPoints'
 import { useFullSlots } from '../hooks/useFullSlots'
-import { calculateBookingCost, SLOTS } from '../lib/bookingCost'
+import { calculateBookingCost, generateSlots } from '../lib/bookingCost'
 import { createBooking, splitWashPrice, generateUniqueBookingCode } from '../lib/bookings'
 import { sendBookingRequestSms } from '../lib/mpesa'
 import { isOnTrial, hasActiveAccess } from '../lib/access'
@@ -118,8 +118,9 @@ export function BookScreen() {
   const steps = ['Service', 'Date & Time', 'Confirm']
 
   // Group slots into AM/PM
-  const amSlots = SLOTS.filter((s) => s.includes('AM'))
-  const pmSlots = SLOTS.filter((s) => s.includes('PM'))
+  const allSlots = generateSlots(point.opens_at, point.closes_at, date)
+  const amSlots = allSlots.filter((s) => s.includes('AM'))
+  const pmSlots = allSlots.filter((s) => s.includes('PM'))
 
   return (
     <div className="flex h-full flex-col" style={{ background: '#F5F5F7' }}>
@@ -343,7 +344,7 @@ export function BookScreen() {
             </div>
 
             <div className="text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-2.5">
-              Afternoon
+              Afternoon &amp; Evening
             </div>
             <div className="grid grid-cols-4 gap-2">
               {slotsLoading
