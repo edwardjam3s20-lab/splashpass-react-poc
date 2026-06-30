@@ -5,6 +5,7 @@ import { getCarsByEmail, deleteCarRow } from '../lib/cars'
 import { getTrialDaysLeft, isOnTrial } from '../lib/access'
 import { getTier } from '../lib/loyalty'
 import { getPushSupport, isSubscribedToReminders, subscribeToReminders, unsubscribeFromReminders, type PushSupport } from '../lib/reminders'
+import { isPushOptedIn, promptPushNotifications, type PushOptInResult } from '../lib/oneSignal'
 
 function carEmoji(carType: string) {
   if (carType === 'SUV') return '🚙'
@@ -23,10 +24,13 @@ export function ProfileScreen() {
   const [pushSupport, setPushSupport] = useState<PushSupport>('default')
   const [remindersOn, setRemindersOn] = useState(false)
   const [togglingReminders, setTogglingReminders] = useState(false)
+  const [updatesOn, setUpdatesOn] = useState(false)
+  const [togglingUpdates, setTogglingUpdates] = useState(false)
 
   useEffect(() => {
     setPushSupport(getPushSupport())
     isSubscribedToReminders().then(setRemindersOn)
+    isPushOptedIn().then(setUpdatesOn)
   }, [])
 
   async function handleEnableReminders() {
@@ -52,6 +56,31 @@ export function ProfileScreen() {
       setTogglingReminders(false)
     }
   }
+
+  async function handleEnableUpdates() {
+    setTogglingUpdates(true)
+    try {
+      const result: PushOptInResult = await promptPushNotifications()
+      if (result === 'granted') {
+        showToast('You\u2019re subscribed to SplashPass updates.')
+        setUpdatesOn(true)
+      } else if (result === 'denied') {
+        showToast('Permission was not granted.', true)
+      } else if (result === 'unsupported') {
+        showToast('Not supported on this browser.', true)
+      } else {
+        showToast('Something went wrong. Please try again.', true)
+      }
+    } finally {
+      setTogglingUpdates(false)
+    }
+  }
+  // Note: OneSignal's Web SDK doesn't expose a simple programmatic "revoke
+  // permission" call (the browser owns that once granted) — disabling here
+  // means opting out of OneSignal's subscription, not revoking OS-level
+  // permission. Left as enable-only for this first pass; an opt-out call
+  // (OneSignal.User.PushSubscription.optOut()) can be added once we
+  // confirm the exact API surface this SDK version exposes.
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
@@ -282,6 +311,35 @@ export function ProfileScreen() {
               }}
             >
               {togglingReminders ? '…' : remindersOn ? 'Turn off' : 'Enable'}
+            </button>
+          )}
+        </div>
+
+        {/* ── Push notifications (OneSignal) ── */}
+        <div className="mb-4 flex items-center gap-3 rounded-[16px] p-3.5"
+          style={{ background: '#fff', border: '1px solid #EBEBED', boxShadow: '0 2px 10px rgba(0,0,0,0.05)' }}>
+          <div className="flex h-10 w-10 flex-shrink-0 items-center justify-center rounded-[12px] text-lg"
+            style={{ background: '#E0FAF9' }}>
+            📣
+          </div>
+          <div className="min-w-0 flex-1">
+            <div className="text-[13px] font-bold text-ink">Push Notifications</div>
+            <div className="text-[11px] text-muted mt-0.5">
+              {pushSupport === 'unsupported'
+                ? 'Not supported on this browser.'
+                : updatesOn
+                ? 'You\u2019ll get news, offers, and updates.'
+                : 'Get news, offers, and app updates.'}
+            </div>
+          </div>
+          {pushSupport !== 'unsupported' && !updatesOn && (
+            <button
+              onClick={handleEnableUpdates}
+              disabled={togglingUpdates}
+              className="sp-press flex-shrink-0 rounded-[10px] px-3.5 py-2 text-[12px] font-bold disabled:opacity-50"
+              style={{ background: '#0A84FF', color: '#fff' }}
+            >
+              {togglingUpdates ? '…' : 'Enable'}
             </button>
           )}
         </div>

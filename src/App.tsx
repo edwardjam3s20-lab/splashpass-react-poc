@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { SplashScreen } from './screens/SplashScreen'
 import { WelcomeScreen } from './screens/WelcomeScreen'
@@ -25,8 +26,18 @@ import { PlansScreen } from './screens/PlansScreen'
 import { AppShell } from './components/AppShell'
 import { RequireAuth } from './components/RequireAuth'
 import { Toast } from './components/Toast'
+import { initOneSignal } from './lib/oneSignal'
 
 function App() {
+  useEffect(() => {
+    // Loads the OneSignal SDK and registers the combined service worker
+    // (see src/sw.ts). Fire-and-forget — does not block rendering, and
+    // does not prompt the user; that happens separately via
+    // promptPushNotifications() called from a user gesture elsewhere
+    // (e.g. a notifications settings screen).
+    initOneSignal()
+  }, [])
+
   return (
     <BrowserRouter>
       <div className="h-screen w-screen overflow-hidden">
