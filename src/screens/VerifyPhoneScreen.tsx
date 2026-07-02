@@ -4,12 +4,13 @@ import { useAppStore } from '../store/useAppStore'
 
 const API = import.meta.env.VITE_API_BASE_URL as string
 
-export function VerifyEmailScreen() {
+export function VerifyPhoneScreen() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
   const email        = params.get('email') ?? ''
   const pendingToken = params.get('token') ?? ''
   const showToast = useAppStore((s) => s.showToast)
+  const setCurrentUser = useAppStore((s) => s.setCurrentUser)
 
   const [code, setCode] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
@@ -18,14 +19,12 @@ export function VerifyEmailScreen() {
   const [resendCooldown, setResendCooldown] = useState(0)
   const inputRefs = useRef<(HTMLInputElement | null)[]>([])
 
-  // Cooldown timer
   useEffect(() => {
     if (resendCooldown <= 0) return
     const t = setTimeout(() => setResendCooldown((c) => c - 1), 1000)
     return () => clearTimeout(t)
   }, [resendCooldown])
 
-  // Redirect if no token/email in URL
   useEffect(() => {
     if (!email || !pendingToken) navigate('/auth/register')
   }, [email, pendingToken, navigate])
@@ -58,7 +57,7 @@ export function VerifyEmailScreen() {
   async function submitCode(fullCode: string) {
     setLoading(true); setError('')
     try {
-      const res = await fetch(`${API}/api/verify/email-verify`, {
+      const res = await fetch(`${API}/api/verify/phone-verify`, {
         method:      'POST',
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json' },
@@ -71,14 +70,10 @@ export function VerifyEmailScreen() {
         inputRefs.current[0]?.focus()
         return
       }
-      // Email verified — now send the phone OTP and move to phone verify screen
-      await fetch(`${API}/api/verify/phone-send`, {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { 'Content-Type': 'application/json' },
-        body:        JSON.stringify({ email, pendingToken }),
-      })
-      navigate(`/verify/phone?email=${encodeURIComponent(email)}&token=${encodeURIComponent(pendingToken)}`)
+      // Both verified — full session cookie set by server, log user in
+      setCurrentUser(data.user)
+      showToast('Account verified! Welcome to SplashPass 🎉')
+      navigate('/home')
     } catch {
       setError('Network error. Please try again.')
       setCode(['', '', '', '', '', ''])
@@ -90,7 +85,7 @@ export function VerifyEmailScreen() {
     if (resendCooldown > 0 || resending) return
     setResending(true)
     try {
-      const res = await fetch(`${API}/api/verify/email-send`, {
+      const res = await fetch(`${API}/api/verify/phone-send`, {
         method:      'POST',
         credentials: 'include',
         headers:     { 'Content-Type': 'application/json' },
@@ -98,7 +93,7 @@ export function VerifyEmailScreen() {
       })
       const data = await res.json()
       if (res.ok) {
-        showToast('A new code has been sent to your email.')
+        showToast('A new code has been sent to your phone.')
         setResendCooldown(60)
         setCode(['', '', '', '', '', ''])
         inputRefs.current[0]?.focus()
@@ -110,25 +105,21 @@ export function VerifyEmailScreen() {
     } finally { setResending(false) }
   }
 
-  const maskedEmail = email.replace(/(.{2})(.*)(@.*)/, (_, a, b, c) =>
-    a + b.replace(/./g, '•') + c
-  )
-
   return (
     <div className="flex h-full flex-col items-center justify-center px-6 py-10"
       style={{ background: '#F5F5F7' }}>
 
       {/* Icon */}
       <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-[28px] text-4xl"
-        style={{ background: 'linear-gradient(135deg, #00C6BE, #0A84FF)', boxShadow: '0 8px 28px rgba(10,132,255,0.35)' }}>
-        ✉️
+        style={{ background: 'linear-gradient(135deg, #30D158, #00C6BE)', boxShadow: '0 8px 28px rgba(48,209,88,0.3)' }}>
+        📱
       </div>
 
       <h1 className="text-[26px] font-extrabold text-ink mb-2 text-center" style={{ letterSpacing: '-0.5px' }}>
-        Check your email
+        Verify your phone
       </h1>
       <p className="text-[14px] text-muted text-center mb-8 leading-relaxed max-w-[280px]">
-        We sent a 6-digit code to <strong className="text-ink">{maskedEmail}</strong>. Enter it below to verify your email.
+        We sent a 6-digit code to the phone number on your account. Enter it below to complete signup.
       </p>
 
       {/* OTP input */}
@@ -146,24 +137,22 @@ export function VerifyEmailScreen() {
             className="h-14 w-11 rounded-[14px] text-center text-[22px] font-bold text-ink outline-none transition-all"
             style={{
               background: '#fff',
-              border: `2px solid ${error ? '#FF3B30' : digit ? '#0A84FF' : '#EBEBED'}`,
-              boxShadow: digit ? '0 2px 8px rgba(10,132,255,0.15)' : 'none',
+              border: `2px solid ${error ? '#FF3B30' : digit ? '#30D158' : '#EBEBED'}`,
+              boxShadow: digit ? '0 2px 8px rgba(48,209,88,0.15)' : 'none',
             }}
           />
         ))}
       </div>
 
-      {/* Error */}
       {error && (
         <p className="text-[13px] font-medium mb-4 text-center" style={{ color: '#FF3B30' }}>
           {error}
         </p>
       )}
 
-      {/* Loading indicator */}
       {loading && (
         <div className="flex items-center gap-2 mb-4">
-          <span className="h-4 w-4 rounded-full border-2 border-blue-200 border-t-blue-500 animate-spin" />
+          <span className="h-4 w-4 rounded-full border-2 border-green-200 border-t-green-500 animate-spin" />
           <span className="text-[13px] text-muted">Verifying…</span>
         </div>
       )}
@@ -177,18 +166,17 @@ export function VerifyEmailScreen() {
           <span
             onClick={resendCode}
             className="font-bold cursor-pointer"
-            style={{ color: resending ? '#8E8E93' : '#0A84FF' }}>
+            style={{ color: resending ? '#8E8E93' : '#30D158' }}>
             {resending ? 'Sending…' : 'Resend code'}
           </span>
         )}
       </div>
 
-      {/* Back */}
       <button
-        onClick={() => navigate('/auth/register')}
+        onClick={() => navigate(-1)}
         className="mt-8 text-[13px] font-medium"
         style={{ color: '#8E8E93' }}>
-        ← Back to sign up
+        ← Back
       </button>
     </div>
   )

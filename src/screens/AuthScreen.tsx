@@ -33,13 +33,17 @@ export function AuthScreen() {
   const showToast = useAppStore((s) => s.showToast)
   const setCurrentUser = useAppStore((s) => s.setCurrentUser)
 
+  // Login state
   const [loginEmail, setLoginEmail] = useState('')
-  const [loginPass, setLoginPass] = useState('')
+  const [loginPass, setLoginPass]   = useState('')
   const [loginError, setLoginError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
 
+  // Register state
+  const [regName, setRegName]   = useState('')
   const [regEmail, setRegEmail] = useState('')
-  const [regPass, setRegPass] = useState('')
+  const [regPhone, setRegPhone] = useState('')
+  const [regPass, setRegPass]   = useState('')
   const [regPass2, setRegPass2] = useState('')
   const [regError, setRegError] = useState('')
   const [regLoading, setRegLoading] = useState(false)
@@ -47,22 +51,42 @@ export function AuthScreen() {
   async function handleLogin() {
     setLoginLoading(true); setLoginError('')
     try {
-      const user = await loginWithEmail(loginEmail, loginPass)
-      setCurrentUser(user); navigate('/home')
+      const result = await loginWithEmail(loginEmail, loginPass)
+      if (result.needsEmailVerification) {
+        // Account exists but email not verified — resume verification flow
+        navigate(`/verify/email?email=${encodeURIComponent(loginEmail.trim().toLowerCase())}&token=${encodeURIComponent(result.pendingToken!)}`)
+        return
+      }
+      if (result.needsPhoneVerification) {
+        // Email verified but phone not — skip to phone step
+        navigate(`/verify/phone?email=${encodeURIComponent(loginEmail.trim().toLowerCase())}&token=${encodeURIComponent(result.pendingToken!)}`)
+        return
+      }
+      setCurrentUser(result.user!)
+      navigate('/home')
     } catch (e) {
       setLoginError(e instanceof AuthError ? e.message : 'Something went wrong. Please try again.')
     } finally { setLoginLoading(false) }
   }
 
   async function handleRegister() {
-    if (!regEmail || !regPass) { setRegError('Please fill in all fields.'); return }
-    if (!isPasswordValid(regPass)) { setRegError('Password must meet all requirements above.'); return }
-    if (regPass !== regPass2) { setRegError('Passwords do not match.'); return }
+    if (!regName || !regEmail || !regPhone || !regPass) {
+      setRegError('Please fill in all fields.'); return
+    }
+    if (!/^\+\d{7,15}$/.test(regPhone.trim())) {
+      setRegError('Phone must be in international format e.g. +254712345678'); return
+    }
+    if (!isPasswordValid(regPass)) {
+      setRegError('Password must meet all requirements above.'); return
+    }
+    if (regPass !== regPass2) {
+      setRegError('Passwords do not match.'); return
+    }
     setRegLoading(true); setRegError('')
     try {
-      const user = await registerWithEmail(regEmail, regPass)
-      setCurrentUser(user)
-      navigate(`/verify?email=${encodeURIComponent(regEmail.trim().toLowerCase())}`)
+      const { pendingToken } = await registerWithEmail(regName, regEmail, regPhone, regPass)
+      // Email OTP already sent by the register route — go straight to verify
+      navigate(`/verify/email?email=${encodeURIComponent(regEmail.trim().toLowerCase())}&token=${encodeURIComponent(pendingToken)}`)
     } catch (e) {
       setRegError(e instanceof AuthError ? e.message : 'Something went wrong. Please try again.')
     } finally { setRegLoading(false) }
@@ -168,9 +192,20 @@ export function AuthScreen() {
               30-day free trial — no card required.
             </p>
 
+            <V2Field label="Full Name">
+              <V2Input type="text" placeholder="James Edward" autoComplete="name"
+                value={regName} onChange={(e) => setRegName(e.target.value)} />
+            </V2Field>
             <V2Field label="Email Address">
               <V2Input type="email" placeholder="you@example.com" autoComplete="email"
                 value={regEmail} onChange={(e) => setRegEmail(e.target.value)} />
+            </V2Field>
+            <V2Field label="Phone Number">
+              <V2Input type="tel" placeholder="+254712345678" autoComplete="tel"
+                value={regPhone} onChange={(e) => setRegPhone(e.target.value)} />
+              <p className="text-[11px] mt-1" style={{ color: '#8E8E93' }}>
+                International format required — e.g. +254 for Kenya
+              </p>
             </V2Field>
             <V2Field label="Password">
               <V2PasswordInput placeholder="Create a password" autoComplete="new-password"
@@ -205,10 +240,9 @@ export function AuthScreen() {
               <div className="flex-1 h-px" style={{ background: '#EBEBED' }} />
             </div>
 
-            {/* Social */}
             {[
               { icon: <GoogleIcon />, label: 'Continue with Google', action: () => showToast('Google sign-in coming soon.') },
-              { icon: <AppleIcon />, label: 'Continue with Apple', action: () => showToast('Apple sign-in coming soon.') },
+              { icon: <AppleIcon />, label: 'Continue with Apple',  action: () => showToast('Apple sign-in coming soon.') },
             ].map((b) => (
               <button key={b.label} onClick={b.action}
                 className="sp-press w-full flex items-center justify-center gap-2.5 rounded-[14px] py-3.5 mb-2.5 text-[14px] font-semibold text-ink"

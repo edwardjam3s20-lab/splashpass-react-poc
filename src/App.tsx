@@ -4,6 +4,7 @@ import { SplashScreen } from './screens/SplashScreen'
 import { WelcomeScreen } from './screens/WelcomeScreen'
 import { AuthScreen } from './screens/AuthScreen'
 import { VerifyEmailScreen } from './screens/VerifyEmailScreen'
+import { VerifyPhoneScreen } from './screens/VerifyPhoneScreen'
 import { ProfileSetupScreen } from './screens/ProfileSetupScreen'
 import { OnboardingScreen } from './screens/OnboardingScreen'
 import { HomeScreen } from './screens/HomeScreen'
@@ -46,7 +47,8 @@ function App() {
           <Route path="/" element={<SplashScreen />} />
           <Route path="/welcome" element={<WelcomeScreen />} />
           <Route path="/auth/:mode" element={<AuthScreen />} />
-          <Route path="/verify" element={<VerifyEmailScreen />} />
+          <Route path="/verify/email" element={<VerifyEmailScreen />} />
+          <Route path="/verify/phone" element={<VerifyPhoneScreen />} />
           <Route path="/profile-setup" element={<ProfileSetupScreen />} />
           <Route
             path="/onboarding"
