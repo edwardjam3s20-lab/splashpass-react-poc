@@ -3,24 +3,14 @@
 // Profile management still hits Supabase directly (no sensitive RPCs needed).
 
 import { supabase } from './supabase'
+import type { Profile } from '../types/database'
+export type { Profile } from '../types/database'
 
 const API = import.meta.env.VITE_API_BASE_URL as string
 
 export class AuthError extends Error {}
 
-export interface Profile {
-  id?:             string
-  email:           string
-  name?:           string
-  phone?:          string
-  role?:           string
-  sub_status?:     string
-  loyalty_points?: number
-  loyalty_tier?:   string
-  email_verified?: boolean
-  phone_verified?: boolean
-  [key: string]:   unknown
-}
+// Profile type is defined in ../types/database.ts and re-exported from there
 
 // ─── Login ────────────────────────────────────────────────────────────────────
 

@@ -60,6 +60,8 @@ export interface Profile {
   /** present only transiently in RPC responses — always stripped before storing */
   password?: string
   role?: 'customer' | 'operator'
+  email_verified?: boolean
+  phone_verified?: boolean
 }
 
 export interface Car {
