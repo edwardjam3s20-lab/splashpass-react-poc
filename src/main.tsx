@@ -5,21 +5,19 @@ import { registerSW } from 'virtual:pwa-register'
 import './index.css'
 import App from './App.tsx'
 
-// Register service worker with a controlled update flow.
-// onNeedRefresh fires when a new SW is waiting — we reload once rather than
-// letting skipWaiting() cause a loop on mobile.
+// registerSW returns the update function directly.
+// onNeedRefresh fires with no args when a new SW is waiting.
+// We call updateSW() once to activate it — the refreshing guard
+// prevents the controllerchange event from triggering a second reload.
 let refreshing = false
-registerSW({
+const updateSW = registerSW({
   immediate: false,
-  onNeedRefresh(updateSW) {
-    // Only reload once — guard against the controllerchange firing twice
+  onNeedRefresh() {
     if (refreshing) return
     refreshing = true
     updateSW(true)
   },
-  onOfflineReady() {
-    // App is ready to work offline — no action needed
-  },
+  onOfflineReady() {},
 })
 
 const queryClient = new QueryClient({
