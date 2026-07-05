@@ -1,14 +1,21 @@
 import { useEffect, useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '../store/useAppStore'
 import { useWashPoints } from '../hooks/useWashPoints'
 import { useFullSlots } from '../hooks/useFullSlots'
+import { useLiveQueue } from '../hooks/useLiveQueue'
+import { QueueBadge } from '../components/QueueBadge'
 import { calculateBookingCost, generateSlots } from '../lib/bookingCost'
 import { createBooking, splitWashPrice, generateUniqueBookingCode } from '../lib/bookings'
 import { sendBookingRequestSms } from '../lib/mpesa'
 import { isOnTrial, hasActiveAccess } from '../lib/access'
 import { StepBar } from '../components/ui'
+
+// Sentinel stored in `time` for an instant "Book Now" request — it skips
+// slot selection entirely and joins the live queue immediately, so there's
+// no fixed hour to store.
+const ASAP_SLOT = 'ASAP'
 
 function todayISO() {
   return new Date().toISOString().split('T')[0]
@@ -17,7 +24,12 @@ function todayISO() {
 export function BookScreen() {
   const { pointId } = useParams<{ pointId: string }>()
   const navigate = useNavigate()
+  const location = useLocation()
   const queryClient = useQueryClient()
+
+  // Arrived here via the Discovery screen's "⚡ Book Now" button — jump
+  // straight into the instant-queue flow instead of the date/time picker.
+  const quickBook = Boolean((location.state as { quickBook?: boolean } | null)?.quickBook)
 
   const currentUser = useAppStore((s) => s.currentUser)
   const userCars = useAppStore((s) => s.userCars)
@@ -33,11 +45,19 @@ export function BookScreen() {
   const { data: washPoints } = useWashPoints()
   const point = washPoints?.find((p) => String(p.id) === String(pointId))
 
-  const [step, setStep] = useState(0) // 0 = service, 1 = date/time, 2 = review
+  // Quick-book (arrived via Discovery's "⚡ Book Now") starts on the
+  // date/time step directly — car + service get auto-picked below — rather
+  // than making the person click through a step they didn't ask for. If
+  // they have no cars yet, stay on step 0 so they still see the "add a
+  // car" prompt instead of a dead end.
+  const [step, setStep] = useState(() => (quickBook && userCars.length > 0 ? 1 : 0)) // 0 = service, 1 = date/time, 2 = review
   const [date, setDate] = useState(todayISO())
   const [submitting, setSubmitting] = useState(false)
 
   const { fullSlots, isLoading: slotsLoading } = useFullSlots(date, point?.name)
+  // Live queue length for this wash point — updates the instant the
+  // operator app accepts, rejects, or completes a booking.
+  const { queueCount, isLoading: queueLoading } = useLiveQueue(date, point?.name)
 
   useEffect(() => {
     if (!hasActiveAccess(currentUser)) navigate('/sub-wall', { replace: true })
@@ -46,6 +66,17 @@ export function BookScreen() {
   useEffect(() => {
     if (!bookingCar && userCars.length > 0) setBookingCar(userCars[0])
   }, [bookingCar, userCars, setBookingCar])
+
+  // Quick-book: auto-pick the cheapest service so there's nothing left to
+  // choose before jumping to the instant-queue card.
+  useEffect(() => {
+    if (quickBook && !bookingService && point && point.services.length > 0) {
+      const cheapest = [...point.services].sort((a, b) => Number(a.price) - Number(b.price))[0]
+      setBookingService(cheapest)
+    }
+  }, [quickBook, bookingService, point, setBookingService])
+
+
 
   if (!point) {
     return (
@@ -290,6 +321,40 @@ export function BookScreen() {
         {/* ── Step 1: Date + Time ── */}
         {step === 1 && (
           <div className="sp-fade-up">
+            {/* Book Now — instant queue join, live-updated from the operator app */}
+            <div
+              className="rounded-[16px] p-4 mb-5"
+              style={{ background: 'linear-gradient(135deg,#E0FAF9,#F3FFFE)', border: '1.5px solid #00C6BE' }}
+            >
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="text-[13px] font-extrabold text-ink">⚡ Book Now</div>
+                <QueueBadge count={queueCount} loading={queueLoading} size="md" />
+              </div>
+              <div className="text-[12px] text-muted mb-3 leading-snug">
+                Skip the schedule — join {point.name}'s live queue right now. The operator sees
+                your request the moment you send it.
+              </div>
+              <button
+                onClick={() => {
+                  setDate(todayISO())
+                  setBookingSlot(ASAP_SLOT)
+                  setStep(2)
+                }}
+                className="sp-press w-full rounded-[12px] py-3 text-[13px] font-extrabold text-white"
+                style={{ background: '#00C6BE', boxShadow: '0 6px 18px rgba(0,198,190,0.3)' }}
+              >
+                Book Now — Join Queue →
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3 mb-5">
+              <div style={{ flex: 1, height: 1, background: '#EBEBED' }} />
+              <span className="text-[11px] font-bold text-muted uppercase tracking-[0.6px]">
+                Or schedule for later
+              </span>
+              <div style={{ flex: 1, height: 1, background: '#EBEBED' }} />
+            </div>
+
             {/* Date picker */}
             <div className="text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-2.5">
               Select Date
@@ -408,8 +473,14 @@ export function BookScreen() {
               <div style={{ height: 1, background: '#EBEBED', margin: '0 0 12px' }} />
 
               {[
-                { label: 'Date', value: date },
-                { label: 'Time', value: bookingSlot || '—' },
+                { label: 'Date', value: bookingSlot === ASAP_SLOT ? 'Today' : date },
+                {
+                  label: 'Time',
+                  value:
+                    bookingSlot === ASAP_SLOT
+                      ? `ASAP — instant request${queueCount > 0 ? ` (${queueCount} ahead)` : ''}`
+                      : bookingSlot || '—',
+                },
                 { label: 'Car', value: bookingCar ? `${bookingCar.make} ${bookingCar.model} · ${bookingCar.plate}` : '—' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between py-1.5">

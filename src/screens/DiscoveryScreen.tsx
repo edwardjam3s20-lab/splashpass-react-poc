@@ -21,9 +21,15 @@ import 'leaflet.markercluster/dist/MarkerCluster.css'
 import { useGeolocation } from '../hooks/useGeolocation'
 import { useAppStore } from '../store/useAppStore'
 import { useWashPointsInBounds, useRatingSummaries } from '../hooks/useWashPoints'
+import { useLiveQueueCounts } from '../hooks/useLiveQueue'
+import { QueueBadge } from '../components/QueueBadge'
 import { distKm } from '../lib/washPoints'
 import type { LatLngBounds } from '../lib/washPoints'
 import type { WashPoint } from '../types/database'
+
+function todayISO() {
+  return new Date().toISOString().split('T')[0]
+}
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -141,20 +147,24 @@ function buildWashIcon(status: 'open' | 'paused', selected = false) {
 // ─── WashCard ─────────────────────────────────────────────────────────────────
 
 interface WashCardProps {
-  point:       WashPoint
-  userLat:     number
-  userLng:     number
-  avgRating:   number | null
-  reviewCount: number
-  selected:    boolean
-  onSelect:    (id: string) => void
-  onBook:      (point: WashPoint) => void
+  point:        WashPoint
+  userLat:      number
+  userLng:      number
+  avgRating:    number | null
+  reviewCount:  number
+  queueCount:   number
+  queueLoading: boolean
+  selected:     boolean
+  onSelect:     (id: string) => void
+  onBook:       (point: WashPoint) => void
+  onBookNow:    (point: WashPoint) => void
 }
 
 function WashCard({
   point, userLat, userLng,
   avgRating, reviewCount,
-  selected, onSelect, onBook,
+  queueCount, queueLoading,
+  selected, onSelect, onBook, onBookNow,
 }: WashCardProps) {
   const dist     = distKm(userLat, userLng, point.lat, point.lng)
   const isOpen   = point.status === 'open'
@@ -272,6 +282,12 @@ function WashCard({
               <span style={{ fontSize: 12, color: '#6E6E73' }}>{formatDist(dist)}</span>
               <span style={{ color: '#AEAEB2', fontSize: 10 }}>·</span>
               <span style={{ fontSize: 12, color: '#6E6E73' }}>🚗 {driveMin} min</span>
+              {isOpen && (
+                <>
+                  <span style={{ color: '#AEAEB2', fontSize: 10 }}>·</span>
+                  <QueueBadge count={queueCount} loading={queueLoading} />
+                </>
+              )}
               {!showPhoto && (
                 <>
                   <span style={{ color: '#AEAEB2', fontSize: 10 }}>·</span>
@@ -324,22 +340,41 @@ function WashCard({
               : <span style={{ fontSize: 12, color: '#AEAEB2' }}>No services listed</span>
             }
           </div>
-          <button
-            onClick={(e) => { e.stopPropagation(); if (isOpen) onBook(point) }}
-            disabled={!isOpen}
-            style={{
-              background:  isOpen ? '#0A84FF' : '#EBEBED',
-              color:       isOpen ? '#fff'    : '#AEAEB2',
-              border: 'none', borderRadius: 14,
-              padding: '9px 20px', fontSize: 13, fontWeight: 700,
-              cursor:     isOpen ? 'pointer' : 'default',
-              boxShadow:  isOpen ? '0 4px 16px rgba(10,132,255,0.3)' : 'none',
-              transition: 'all 0.15s',
-              letterSpacing: '-0.2px', fontFamily: 'inherit',
-            }}
-          >
-            {isOpen ? 'Book →' : 'Closed'}
-          </button>
+          <div style={{ display: 'flex', gap: 8 }}>
+            {isOpen && (
+              <button
+                onClick={(e) => { e.stopPropagation(); onBookNow(point) }}
+                style={{
+                  background: '#00C6BE', color: '#fff',
+                  border: 'none', borderRadius: 14,
+                  padding: '9px 14px', fontSize: 13, fontWeight: 700,
+                  cursor: 'pointer',
+                  boxShadow: '0 4px 16px rgba(0,198,190,0.3)',
+                  transition: 'all 0.15s',
+                  letterSpacing: '-0.2px', fontFamily: 'inherit',
+                }}
+                title="Skip scheduling — join the live queue now"
+              >
+                ⚡ Book Now
+              </button>
+            )}
+            <button
+              onClick={(e) => { e.stopPropagation(); if (isOpen) onBook(point) }}
+              disabled={!isOpen}
+              style={{
+                background:  isOpen ? '#0A84FF' : '#EBEBED',
+                color:       isOpen ? '#fff'    : '#AEAEB2',
+                border: 'none', borderRadius: 14,
+                padding: '9px 20px', fontSize: 13, fontWeight: 700,
+                cursor:     isOpen ? 'pointer' : 'default',
+                boxShadow:  isOpen ? '0 4px 16px rgba(10,132,255,0.3)' : 'none',
+                transition: 'all 0.15s',
+                letterSpacing: '-0.2px', fontFamily: 'inherit',
+              }}
+            >
+              {isOpen ? 'Schedule' : 'Closed'}
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -426,6 +461,10 @@ export function DiscoveryScreen() {
 
   const { points, isLoading, isFetching } = useWashPointsInBounds(mapBounds, userLat, userLng)
   const ratingsMap = useRatingSummaries()
+  // Live queue counts, keyed by wash point name — kept in sync with the
+  // operator app in real time (see useLiveQueueCounts). One subscription
+  // covers every card in the list.
+  const { counts: queueCounts, isLoading: queueCountsLoading } = useLiveQueueCounts(todayISO())
 
   // ── Map refs ──
   const mapContainerRef   = useRef<HTMLDivElement>(null)
@@ -728,6 +767,13 @@ export function DiscoveryScreen() {
     [navigate]
   )
 
+  // "Book Now" — same booking screen, but flagged so it opens straight
+  // into the instant-queue flow instead of the date/time picker.
+  const handleBookNow = useCallback(
+    (point: WashPoint) => navigate(`/book/${point.id}`, { state: { quickBook: true } }),
+    [navigate]
+  )
+
   const mapH = `calc(100% - ${sheetHeightPx - 32}px)`
 
   return (
@@ -938,9 +984,12 @@ export function DiscoveryScreen() {
                     userLng={userLng}
                     avgRating={rating?.avg_rating ?? null}
                     reviewCount={rating?.review_count ?? 0}
+                    queueCount={queueCounts[p.name] ?? 0}
+                    queueLoading={queueCountsLoading}
                     selected={p.id === selectedId}
                     onSelect={selectPoint}
                     onBook={handleBook}
+                    onBookNow={handleBookNow}
                   />
                 </div>
               )
