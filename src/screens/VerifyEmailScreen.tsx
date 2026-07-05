@@ -10,6 +10,7 @@ export function VerifyEmailScreen() {
   const email        = params.get('email') ?? ''
   const pendingToken = params.get('token') ?? ''
   const showToast = useAppStore((s) => s.showToast)
+  const setCurrentUser = useAppStore((s) => s.setCurrentUser)
 
   const [code, setCode] = useState(['', '', '', '', '', ''])
   const [error, setError] = useState('')
@@ -71,14 +72,10 @@ export function VerifyEmailScreen() {
         inputRefs.current[0]?.focus()
         return
       }
-      // Email verified — now send the phone OTP and move to phone verify screen
-      await fetch(`${API}/api/verify/phone-send`, {
-        method:      'POST',
-        credentials: 'include',
-        headers:     { 'Content-Type': 'application/json' },
-        body:        JSON.stringify({ email, pendingToken }),
-      })
-      navigate(`/verify/phone?email=${encodeURIComponent(email)}&token=${encodeURIComponent(pendingToken)}`)
+      // Email verified — session issued by server, log user in
+      setCurrentUser(data.user)
+      showToast('Email verified! Welcome to SplashPass 🎉')
+      navigate('/home')
     } catch {
       setError('Network error. Please try again.')
       setCode(['', '', '', '', '', ''])
