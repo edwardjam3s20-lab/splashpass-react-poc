@@ -30,6 +30,12 @@ export async function triggerStkPush(
  * *confirmed* (paid) booking. Wording is intentionally different: this one
  * sets the expectation that the operator still needs to respond.
  */
+// NOTE: the server now builds the message text itself from a fixed
+// template keyed by `type` — it no longer accepts free-text `message`.
+// This closes off the endpoint from being usable to send arbitrary text
+// (see api/send-sms.js). If you add a new notification type, add a
+// matching template there first.
+
 export async function sendBookingRequestSms(
   phone: string,
   pointName: string,
@@ -37,11 +43,10 @@ export async function sendBookingRequestSms(
   slotTime: string
 ): Promise<boolean> {
   try {
-    const message = `SplashPass: Your booking request at ${pointName} for ${date} ${slotTime} has been sent. We'll notify you once the operator responds.`
     const res = await fetch('/api/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message }),
+      body: JSON.stringify({ phone, type: 'booking_request', pointName, date, slotTime }),
     })
     const data = await res.json()
     return Boolean(data.success)
@@ -57,11 +62,10 @@ export async function sendBookingSms(
   slotTime: string
 ): Promise<boolean> {
   try {
-    const message = `SplashPass Booking Confirmed! Location: ${pointName} | Date: ${date} | Time: ${slotTime}. Show QR code to attendant.`
     const res = await fetch('/api/send-sms', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ phone, message }),
+      body: JSON.stringify({ phone, type: 'booking_confirmed', pointName, date, slotTime }),
     })
     const data = await res.json()
     return Boolean(data.success)

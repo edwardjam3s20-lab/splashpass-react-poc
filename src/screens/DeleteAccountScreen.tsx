@@ -9,15 +9,17 @@ export function DeleteAccountScreen() {
   const logout = useAppStore((s) => s.logout)
   const showToast = useAppStore((s) => s.showToast)
   const [confirm, setConfirm] = useState('')
+  const [password, setPassword] = useState('')
   const [deleting, setDeleting] = useState(false)
   const [error, setError] = useState('')
 
   async function handleDelete() {
     if (!currentUser) return
     if (confirm.trim().toLowerCase() !== 'delete') { setError('Please type "delete" to confirm.'); return }
+    if (!password) { setError('Please enter your password to confirm.'); return }
     setDeleting(true); setError('')
     try {
-      await deleteAccount(currentUser.email)
+      await deleteAccount(currentUser.email, password)
       logout(); showToast('Account deleted.'); navigate('/welcome', { replace: true })
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Could not delete account.')
@@ -36,6 +38,12 @@ export function DeleteAccountScreen() {
         <p className="text-[14px] text-muted mb-8 leading-relaxed max-w-[280px] mx-auto">
           This permanently removes all your data, bookings, and loyalty points. This cannot be undone.
         </p>
+        <div className="text-left mb-3">
+          <label className="block text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-2">Confirm your password</label>
+          <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Password"
+            className="w-full rounded-[14px] px-4 py-3.5 text-[15px] font-medium text-ink bg-white outline-none"
+            style={{ border: '1.5px solid #EBEBED' }} />
+        </div>
         <div className="text-left mb-3">
           <label className="block text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-2">Type "delete" to confirm</label>
           <input value={confirm} onChange={(e) => setConfirm(e.target.value)} placeholder="delete"

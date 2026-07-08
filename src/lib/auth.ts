@@ -91,11 +91,20 @@ export async function logoutUser(): Promise<void> {
 }
 
 // ─── Profile & account management ────────────────────────────────────────────
-// These go directly to Supabase since they only read/write the profiles table
-// with no password hashing or session logic needed.
+// Reads still go directly to Supabase. Writes go through SECURITY DEFINER
+// RPCs instead of `.update()`/`.delete()` on the raw table — see
+// supabase/profile_account_security.sql for why: with only the public
+// anon key and no Supabase Auth session, a direct `.update(updates)`
+// accepted ANY column for ANY email, which meant a forged request could
+// set wallet_balance/loyalty_points/role/sub_status directly. The RPC is
+// a hard whitelist of the few fields a user should be able to touch
+// about themselves.
 
 export async function updateProfile(email: string, updates: Partial<Profile>): Promise<void> {
-  const { error } = await supabase.from('profiles').update(updates).eq('email', email)
+  const { error } = await supabase.rpc('update_profile_secure', {
+    p_email:   email,
+    p_updates: updates,
+  })
   if (error) throw error
 }
 
@@ -122,23 +131,33 @@ export async function verifyPasswordOnly(email: string, password: string): Promi
   return Boolean(data)
 }
 
-export async function deleteAccount(email: string): Promise<void> {
-  await supabase
-    .from('bookings')
-    .update({ user_email: 'deleted@splashpass.site', user_name: 'Deleted User' })
-    .eq('user_email', email)
-
-  const { error } = await supabase.from('profiles').delete().eq('email', email)
-  if (error) throw error
+// Now requires the account password. Previously this deleted any email
+// passed to it with zero authentication at all — literally any POST with
+// a stranger's email would delete their account. Deleting an account is
+// destructive and irreversible, so re-verifying the password (the same
+// check the server already does for change_password) is the minimum bar
+// here, even though it means DeleteAccountScreen now needs a password
+// field it didn't have before.
+export async function deleteAccount(email: string, password: string): Promise<void> {
+  const { error } = await supabase.rpc('delete_account_secure', {
+    p_email:    email,
+    p_password: password,
+  })
+  if (error) throw new AuthError('Incorrect password, or account could not be deleted.')
 }
 
-export async function getUserByEmail(email: string): Promise<Profile | null> {
-  const { data, error } = await supabase
-    .from('profiles')
-    .select('*')
-    .eq('email', email)
-    .maybeSingle()
-  if (error) throw error
-  if (data) delete data.password
-  return data
+const SPLASHMAIN_BASE = import.meta.env.VITE_SPLASHMAIN_URL || 'https://splashmain.vercel.app'
+
+// Reads the caller's OWN profile via the session cookie rather than
+// hitting Supabase directly with an arbitrary email — see
+// app/api/customer/profile/route.js in splashmain. The `email` param is
+// kept for now to avoid touching every call site, but it's no longer used
+// for the actual lookup; the one real caller (useSubscriptionPoll) already
+// only ever passes currentUser.email anyway.
+export async function getUserByEmail(_email: string): Promise<Profile | null> {
+  const res = await fetch(`${SPLASHMAIN_BASE}/api/customer/profile`, { credentials: 'include' })
+  if (res.status === 404) return null
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error || 'Failed to load profile.')
+  return (data.profile as Profile) ?? null
 }

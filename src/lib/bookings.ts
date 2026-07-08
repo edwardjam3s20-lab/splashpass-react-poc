@@ -1,26 +1,44 @@
 import { supabase } from './supabase'
 import type { Booking } from '../types/database'
 
+// Only the columns needed for public queue/full-slot display — never the
+// full row. Previously `select('*')` here returned every booking's name,
+// phone, car plate, and pricing for anyone browsing a date, to any visitor
+// with the anon key (this is queried before login, so it has to stay
+// world-readable — but "world-readable" and "world-readable in full" are
+// different things). Matches the column-level grant in
+// supabase/bookings_queue_columns.sql — if you need another column here,
+// add it to that GRANT first or this will start erroring.
 export async function getBookingsByDate(date: string): Promise<Booking[]> {
-  const { data, error } = await supabase.from('bookings').select('*').eq('date', date)
+  const { data, error } = await supabase
+    .from('bookings')
+    .select('id, date, time, location, status')
+    .eq('date', date)
   if (error) throw error
   return data as Booking[]
 }
 
-export async function getBookingsByEmail(email: string): Promise<Booking[]> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('*')
-    .eq('user_email', email)
-    .order('created_at', { ascending: false })
-  if (error) throw error
-  return data as Booking[]
+// Reads the caller's OWN bookings via the session cookie rather than
+// hitting Supabase directly with an arbitrary email — see
+// app/api/customer/bookings/route.js in splashmain. The `email` param is
+// kept for now to avoid touching every call site, but it's no longer used
+// for the actual lookup (the server derives it from the session); every
+// real caller already only ever passes currentUser.email anyway.
+export async function getBookingsByEmail(_email: string): Promise<Booking[]> {
+  const res = await fetch(`${SPLASHMAIN_BASE}/api/customer/bookings`, { credentials: 'include' })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error || 'Failed to load bookings.')
+  return (data.bookings ?? []) as Booking[]
 }
 
 export async function getBookingById(id: string): Promise<Booking | null> {
-  const { data, error } = await supabase.from('bookings').select('*').eq('id', id).maybeSingle()
-  if (error) throw error
-  return (data as Booking) ?? null
+  const res = await fetch(`${SPLASHMAIN_BASE}/api/customer/bookings?id=${encodeURIComponent(id)}`, {
+    credentials: 'include',
+  })
+  if (res.status === 404) return null
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new Error(data?.error || 'Failed to load booking.')
+  return (data.booking as Booking) ?? null
 }
 
 /**
@@ -61,8 +79,16 @@ const SPLASHMAIN_BASE = import.meta.env.VITE_SPLASHMAIN_URL || 'https://splashma
 export async function createBooking(
   booking: Omit<Booking, 'id' | 'created_at'>
 ): Promise<Booking> {
+  // credentials: 'include' is required now that /api/bookings checks the
+  // session — without it, the splashmain session cookie (set on login)
+  // never gets attached to this cross-origin request, and every booking
+  // would 401. Pricing/identity fields in `booking` (user_email,
+  // wash_price, total_amount, etc.) are still sent for backward
+  // compatibility but the server now ignores them and derives everything
+  // from the session + the actual wash point/service rows instead.
   const res = await fetch(`${SPLASHMAIN_BASE}/api/bookings`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(booking),
   })
@@ -74,13 +100,8 @@ export async function createBooking(
 export async function getBookingPaymentStatus(
   bookingId: string
 ): Promise<'pending' | 'paid' | null> {
-  const { data, error } = await supabase
-    .from('bookings')
-    .select('payment_status')
-    .eq('id', bookingId)
-    .maybeSingle()
-  if (error || !data) return null
-  return data.payment_status ?? null
+  const booking = await getBookingById(bookingId)
+  return booking?.payment_status ?? null
 }
 
 /**
