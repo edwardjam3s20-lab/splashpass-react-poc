@@ -53,12 +53,22 @@ export function MpesaBookingScreen() {
 
   if (!pendingBooking) return null
   const { booking } = pendingBooking
+  // total_amount is missing in a real case (see PendingApprovalScreen's
+  // realtime handler — worth checking why upstream). Every other screen in
+  // this app already guards this same field with ?? for display; this one
+  // didn't, which crashed the whole screen. But display isn't the only risk
+  // here — 0 is a safe fallback to *show*, it is not a safe amount to
+  // *charge*. amountKnown gates both payment buttons below so a missing
+  // amount blocks payment instead of silently charging KSh 0.
+  const amountKnown = booking.total_amount != null
+  const amount = booking.total_amount ?? 0
 
   async function handlePay() {
+    if (!amountKnown) { setStatus('error'); setStatusText("Couldn't load the amount due — please go back and retry."); return }
     if (!phone.trim()) { setStatus('error'); setStatusText('Please enter your M-Pesa number.'); return }
     setPaying(true); setStatus('pending'); setStatusText('Sending M-Pesa prompt...')
     try {
-      const result = await triggerStkPush(phone.trim(), booking.total_amount)
+      const result = await triggerStkPush(phone.trim(), booking.total_amount!)
       if (result.success) {
         setStatusText('Enter your M-Pesa PIN on your phone.')
         showToast('M-Pesa prompt sent!')
@@ -72,9 +82,10 @@ export function MpesaBookingScreen() {
   }
 
   async function handleWalletPay() {
+    if (!amountKnown) { showToast("Couldn't load the amount due — please go back and retry.", true); return }
     setWalletPaying(true)
     try {
-      const result = await payBookingFromWallet(booking.id, booking.total_amount)
+      const result = await payBookingFromWallet(booking.id, booking.total_amount!)
       if (!result.ok) {
         showToast(result.error || 'Wallet payment failed', true)
         return
@@ -129,7 +140,7 @@ export function MpesaBookingScreen() {
           </div>
           <div className="text-[42px] font-extrabold text-white leading-none mb-1"
             style={{ letterSpacing: '-1.5px' }}>
-            KSh {booking.total_amount.toLocaleString()}
+            {amountKnown ? `KSh ${amount.toLocaleString()}` : 'Amount unavailable'}
           </div>
           <div className="text-[13px] mt-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
             via M-Pesa
@@ -163,26 +174,26 @@ export function MpesaBookingScreen() {
                   {walletBalance == null ? '···' : `KSh ${walletBalance.toLocaleString()}`}
                 </span>
               </div>
-              {walletBalance != null && walletBalance < booking.total_amount && (
+              {walletBalance != null && walletBalance < amount && (
                 <div className="mt-2.5 rounded-[10px] px-3 py-2 text-[12px]" style={{ background: '#FFF0EE', color: '#CC2222' }}>
-                  Not enough balance. Top up KSh {(booking.total_amount - walletBalance).toLocaleString()} more, or pay via M-Pesa.
+                  Not enough balance. Top up KSh {(amount - walletBalance).toLocaleString()} more, or pay via M-Pesa.
                 </div>
               )}
             </div>
 
             <button
               onClick={handleWalletPay}
-              disabled={walletPaying || status === 'success' || walletBalance == null || walletBalance < booking.total_amount}
+              disabled={walletPaying || status === 'success' || !amountKnown || walletBalance == null || walletBalance < amount}
               className="sp-press w-full rounded-[16px] py-4 mb-3 text-[15px] font-extrabold text-white"
               style={{
                 background: '#0A84FF',
                 boxShadow: '0 8px 24px rgba(10,132,255,0.36)',
-                opacity: walletPaying || status === 'success' || walletBalance == null || walletBalance < booking.total_amount ? 0.5 : 1,
+                opacity: walletPaying || status === 'success' || !amountKnown || walletBalance == null || walletBalance < amount ? 0.5 : 1,
               }}
             >
-              {walletPaying ? 'Processing…' : `Pay KSh ${booking.total_amount.toLocaleString()} from Wallet`}
+              {walletPaying ? 'Processing…' : `Pay KSh ${amount.toLocaleString()} from Wallet`}
             </button>
-            {walletBalance != null && walletBalance < booking.total_amount && (
+            {walletBalance != null && walletBalance < amount && (
               <button
                 onClick={() => navigate('/wallet')}
                 className="sp-press w-full rounded-[16px] py-3.5 mb-3 text-[14px] font-bold"
@@ -230,12 +241,12 @@ export function MpesaBookingScreen() {
 
             <button
               onClick={handlePay}
-              disabled={paying || status === 'success'}
+              disabled={paying || status === 'success' || !amountKnown}
               className="sp-press w-full rounded-[16px] py-4 mb-3 text-[15px] font-extrabold text-white"
               style={{
                 background: '#0A84FF',
                 boxShadow: '0 8px 24px rgba(10,132,235,0.36)',
-                opacity: paying || status === 'success' ? 0.5 : 1,
+                opacity: paying || status === 'success' || !amountKnown ? 0.5 : 1,
               }}>
               {paying ? 'Please wait…' : 'Pay Now'}
             </button>

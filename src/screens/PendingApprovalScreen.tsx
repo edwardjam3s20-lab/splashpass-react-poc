@@ -45,6 +45,19 @@ export function PendingApprovalScreen() {
 
   // Realtime subscription — fires the moment the operator accepts/rejects,
   // without the customer needing to refresh or poll.
+  //
+  // payload.new only carries whatever columns the anon role is granted on
+  // `bookings` (id, date, time, location, status — see
+  // read_side_lockdown.sql's column-level GRANT, added to close a read-side
+  // IDOR). status is safe to trust directly for the phase transition below,
+  // but the rest of the row — total_amount, car_plate, etc. — is NOT in
+  // that grant and comes through as undefined. Treating payload.new as the
+  // full Booking (as this used to) wipes out pricing the moment an operator
+  // accepts, which is exactly what crashed MpesaBookingScreen. Instead this
+  // uses the event purely as a signal to refetch through getBookingById
+  // (the session-authenticated splashmain route, using the service role
+  // key server-side) — the same "invalidate rather than patch" approach
+  // useLiveQueueCounts already uses for this same table.
   useEffect(() => {
     if (!bookingId) return
     const channel = supabase
@@ -53,11 +66,11 @@ export function PendingApprovalScreen() {
         'postgres_changes',
         { event: 'UPDATE', schema: 'public', table: 'bookings', filter: `id=eq.${bookingId}` },
         (payload) => {
-          const updated = payload.new as Booking
-          setBooking(updated)
-          if (updated.status === 'accepted') setPhase('accepted')
-          else if (updated.status === 'rejected') setPhase('rejected')
-          else if (updated.status === 'cancelled') setPhase('cancelled')
+          const status = (payload.new as Pick<Booking, 'status'>).status
+          if (status === 'accepted') setPhase('accepted')
+          else if (status === 'rejected') setPhase('rejected')
+          else if (status === 'cancelled') setPhase('cancelled')
+          getBookingById(bookingId).then((full) => { if (full) setBooking(full) })
         }
       )
       .subscribe()
