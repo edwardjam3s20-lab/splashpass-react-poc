@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { useLocation, useNavigate, useParams } from 'react-router-dom'
 import { useQueryClient } from '@tanstack/react-query'
 import { useAppStore } from '../store/useAppStore'
-import { useWashPoints } from '../hooks/useWashPoints'
+import { useWashPoints, useOperatorStatuses } from '../hooks/useWashPoints'
 import { useFullSlots } from '../hooks/useFullSlots'
 import { useLiveQueue } from '../hooks/useLiveQueue'
 import { QueueBadge } from '../components/QueueBadge'
@@ -43,7 +43,15 @@ export function BookScreen() {
   const showToast = useAppStore((s) => s.showToast)
 
   const { data: washPoints } = useWashPoints()
-  const point = washPoints?.find((p) => String(p.id) === String(pointId))
+  const { data: operatorStatuses } = useOperatorStatuses()
+  const rawPoint = washPoints?.find((p) => String(p.id) === String(pointId))
+  // wash_points itself has no status column — same live source the
+  // Discovery map already trusts (useSortedWashPoints/useWashPointsInBounds),
+  // merged here too so a wash point that's paused mid-flow interrupts the
+  // booking instead of only failing at the final confirm.
+  const point = rawPoint
+    ? { ...rawPoint, status: operatorStatuses?.[rawPoint.name] ?? rawPoint.status }
+    : undefined
 
   // Quick-book (arrived via Discovery's "⚡ Book Now") starts on the
   // date/time step directly — car + service get auto-picked below — rather
@@ -84,6 +92,43 @@ export function BookScreen() {
         <div className="text-center">
           <div className="sp-skeleton h-8 w-48 rounded mb-3 mx-auto" />
           <div className="sp-skeleton h-4 w-32 rounded mx-auto" />
+        </div>
+      </div>
+    )
+  }
+
+  if (point.status === 'paused') {
+    return (
+      <div className="flex h-full flex-col" style={{ background: '#F5F5F7' }}>
+        <div className="bg-white px-4 pt-3 pb-4" style={{ boxShadow: '0 1px 0 #EBEBED' }}>
+          <button
+            onClick={() => navigate('/discover')}
+            className="sp-press flex h-9 w-9 items-center justify-center rounded-[11px] text-lg text-ink"
+            style={{ background: '#F5F5F7' }}
+          >
+            ←
+          </button>
+        </div>
+        <div className="flex flex-1 flex-col items-center justify-center px-8 text-center sp-fade-up">
+          <div
+            className="mb-4 flex h-14 w-14 items-center justify-center rounded-[16px] text-2xl"
+            style={{ background: 'rgba(255,59,48,0.1)' }}
+          >
+            🚫
+          </div>
+          <div className="text-[16px] font-extrabold text-ink mb-1.5">
+            {point.name} isn't taking bookings right now
+          </div>
+          <div className="text-[13px] text-muted mb-5">
+            This wash point is temporarily paused. Try another one nearby, or check back shortly.
+          </div>
+          <button
+            onClick={() => navigate('/discover')}
+            className="sp-press rounded-[12px] px-5 py-2.5 text-[13px] font-bold text-white"
+            style={{ background: '#0A84FF' }}
+          >
+            Browse other wash points
+          </button>
         </div>
       </div>
     )

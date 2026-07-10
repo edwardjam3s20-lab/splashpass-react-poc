@@ -5,7 +5,9 @@
 //   useRatingSummaries()           — TanStack Query wrapper for rating data
 //   useSortedWashPoints unchanged  — existing screens keep working
 
-import { useQuery } from '@tanstack/react-query'
+import { useEffect } from 'react'
+import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { supabase } from '../lib/supabase'
 import {
   fetchWashPoints,
   fetchWashPointsInBounds,
@@ -26,12 +28,41 @@ export function useWashPoints() {
   })
 }
 
+// Open/paused per wash point, kept live the same way useLiveQueueCounts()
+// keeps queue counts live — a Realtime subscription on the table that
+// changes (operators), invalidating on any change rather than patching the
+// cache by hand. refetchInterval is kept as a 45s backstop (unlike
+// useLiveQueueCounts, which has none) since a missed status change here
+// means someone fills out an entire booking form for a wash point that
+// can't accept it — worth the extra safety net.
 export function useOperatorStatuses() {
-  return useQuery({
+  const queryClient = useQueryClient()
+
+  const query = useQuery({
     queryKey: ['operator-statuses'],
     queryFn: fetchOperatorStatuses,
-    refetchInterval: 30_000,
+    staleTime: 15_000,
+    refetchInterval: 45_000,
   })
+
+  useEffect(() => {
+    const channel = supabase
+      .channel('operator-statuses')
+      .on(
+        'postgres_changes',
+        { event: '*', schema: 'public', table: 'operators' },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ['operator-statuses'] })
+        }
+      )
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
+  }, [queryClient])
+
+  return query
 }
 
 /**
