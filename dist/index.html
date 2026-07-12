@@ -10,14 +10,35 @@
     <meta name="apple-mobile-web-app-title" content="SplashPass" />
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="apple-touch-icon" href="/icon.svg" />
-    <title>SplashPass</title>
-
+    <!-- Baseline meta/OG — safety net if scripts/prerender.mjs is ever skipped.
+         For the public routes it lists, that script overwrites these with
+         page-specific values at build time; see scripts/prerender.mjs. -->
     <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-    <script type="module" crossorigin src="/assets/index-C2w90Oet.js"></script>
-    <link rel="stylesheet" crossorigin href="/assets/index-BPdIBbHl.css">
-  <link rel="manifest" href="/manifest.webmanifest"><script id="vite-plugin-pwa:register-sw" src="/registerSW.js"></script></head>
+    <script type="module" crossorigin src="/assets/index-fW5_rOyx.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-CoySI28Q.css">
+  <link rel="manifest" href="/manifest.webmanifest"><title>SplashPass – Car Wash Booking App for Mombasa</title>
+    <meta name="description" content="Book car washes instantly, check in with a QR code, and enjoy member-only pricing at verified wash points across Mombasa. Pay easily with M-Pesa." />
+    <link rel="canonical" href="https://www.splashpass.site/" />
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="SplashPass" />
+    <meta property="og:title" content="SplashPass – Car Wash Booking App for Mombasa" />
+    <meta property="og:description" content="Book car washes instantly, check in with a QR code, and enjoy member-only pricing at verified wash points across Mombasa. Pay easily with M-Pesa." />
+    <meta property="og:url" content="https://www.splashpass.site/" />
+    <meta property="og:image" content="https://www.splashpass.site/og-image.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="SplashPass – Car Wash Booking App for Mombasa" />
+    <meta name="twitter:description" content="Book car washes instantly, check in with a QR code, and enjoy member-only pricing at verified wash points across Mombasa. Pay easily with M-Pesa." />
+    <meta name="twitter:image" content="https://www.splashpass.site/og-image.png" />
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"Organization","name":"SplashPass","url":"https://www.splashpass.site","logo":"https://www.splashpass.site/icon.svg","description":"Car wash booking and subscription app for Mombasa, Kenya."}</script>
+  </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div style="min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0A1628;color:#fff;font-family:sans-serif;text-align:center;padding:24px;">
+        <h1 style="font-size:28px;font-weight:800;margin-bottom:6px;">SplashPass</h1>
+        <p style="font-size:13px;letter-spacing:1.5px;text-transform:uppercase;color:rgba(255,255,255,0.5);margin-bottom:24px;">Premium Car Care</p>
+        <p style="max-width:320px;color:rgba(255,255,255,0.7);line-height:1.6;">Book car washes instantly, check in with a QR code, and enjoy member-only pricing at verified wash points across Mombasa.</p>
+        <p style="margin-top:24px;"><a href="/welcome" style="color:#0A84FF;font-weight:700;text-decoration:none;">Get started &rarr;</a></p>
+      </div></div>
   </body>
 </html>

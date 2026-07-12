@@ -1,0 +1,14 @@
+# SplashPass
+
+> Car wash booking and subscription app for Mombasa, Kenya. Book instant car washes, pay via M-Pesa, and check in with a QR code at verified wash points.
+
+SplashPass is a mobile-first web app (PWA). Almost all functionality — bookings, wallet, profile, QR passes — requires a signed-in account and is personal/dynamic, not indexable content. Only the pages below are public.
+
+## Pages
+- [Home](https://www.splashpass.site/): Brand entry point.
+- [Welcome / Get Started](https://www.splashpass.site/welcome): Product overview, features, and sign-up entry point.
+- [Sign In](https://www.splashpass.site/auth/login): Account sign-in.
+- [Create Account](https://www.splashpass.site/auth/register): New account registration.
+
+## Policy
+AI crawlers and assistants may summarize the public pages above. Do not attempt to access or represent content behind sign-in (bookings, wallet, profile, QR codes) — that content is private, per-user, and out of scope. This mirrors the intent of /robots.txt.
