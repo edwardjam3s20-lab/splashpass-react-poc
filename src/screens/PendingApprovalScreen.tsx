@@ -78,19 +78,40 @@ export function PendingApprovalScreen() {
     return () => { supabase.removeChannel(channel) }
   }, [bookingId])
 
+  // booking is tracked via a ref + a one-way "have we ever seen it" flag,
+  // rather than as a direct effect dependency below. If `booking` itself
+  // were a dependency: any later update to it (e.g. an unrelated realtime
+  // UPDATE landing on this same row — a reminder flag, a wash-status
+  // touch, anything) reruns the hand-off effect, whose cleanup cancels the
+  // pending setTimeout — and since settledRef is already true from the
+  // first run, nothing reschedules it. The customer gets stuck on "Taking
+  // you to payment…" forever, no error, because the navigate that was
+  // supposed to fire got silently cancelled by an unrelated re-render.
+  // hasBooking is a primitive that flips false→true exactly once and never
+  // again, so it triggers the hand-off effect when data first arrives
+  // (even if phase reached 'accepted' first) without re-triggering on
+  // every subsequent object-identity change afterward.
+  const bookingRef = useRef<Booking | null>(null)
+  const [hasBooking, setHasBooking] = useState(false)
+  useEffect(() => {
+    bookingRef.current = booking
+    if (booking && !hasBooking) setHasBooking(true)
+  }, [booking, hasBooking])
+
   // Once accepted, hand off to payment — runs once via settledRef so a
   // re-render from a second realtime payload doesn't navigate twice.
   useEffect(() => {
-    if (phase !== 'accepted' || !booking || settledRef.current) return
+    const b = bookingRef.current
+    if (phase !== 'accepted' || !hasBooking || !b || settledRef.current) return
     settledRef.current = true
     setPendingBooking({
-      booking,
-      code: booking.booking_code || pendingBookingCode || '',
-      date: booking.date || pendingBookingDate || '',
+      booking: b,
+      code: b.booking_code || pendingBookingCode || '',
+      date: b.date || pendingBookingDate || '',
     })
     const id = setTimeout(() => navigate('/mpesa/booking'), 900)
     return () => clearTimeout(id)
-  }, [phase, booking, navigate, setPendingBooking, pendingBookingCode, pendingBookingDate])
+  }, [phase, hasBooking, navigate, setPendingBooking, pendingBookingCode, pendingBookingDate])
 
   async function handleCancel() {
     if (!booking || cancelling) return
