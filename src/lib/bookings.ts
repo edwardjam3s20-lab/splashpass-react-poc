@@ -1,4 +1,5 @@
 import { supabase } from './supabase'
+import { apiFetch } from './tokenRefresh'
 import type { Booking } from '../types/database'
 
 // Only the columns needed for public queue/full-slot display — never the
@@ -25,14 +26,14 @@ export async function getBookingsByDate(date: string): Promise<Booking[]> {
 // for the actual lookup (the server derives it from the session); every
 // real caller already only ever passes currentUser.email anyway.
 export async function getBookingsByEmail(_email: string): Promise<Booking[]> {
-  const res = await fetch(`${SPLASHMAIN_BASE}/api/customer/bookings`, { credentials: 'include' })
+  const res = await apiFetch(`${SPLASHMAIN_BASE}/api/customer/bookings`, { credentials: 'include' })
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data?.error || 'Failed to load bookings.')
   return (data.bookings ?? []) as Booking[]
 }
 
 export async function getBookingById(id: string): Promise<Booking | null> {
-  const res = await fetch(`${SPLASHMAIN_BASE}/api/customer/bookings?id=${encodeURIComponent(id)}`, {
+  const res = await apiFetch(`${SPLASHMAIN_BASE}/api/customer/bookings?id=${encodeURIComponent(id)}`, {
     credentials: 'include',
   })
   if (res.status === 404) return null
@@ -86,7 +87,7 @@ export async function createBooking(
   // wash_price, total_amount, etc.) are still sent for backward
   // compatibility but the server now ignores them and derives everything
   // from the session + the actual wash point/service rows instead.
-  const res = await fetch(`${SPLASHMAIN_BASE}/api/bookings`, {
+  const res = await apiFetch(`${SPLASHMAIN_BASE}/api/bookings`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },

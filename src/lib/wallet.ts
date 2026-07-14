@@ -1,3 +1,5 @@
+import { apiFetch } from './tokenRefresh'
+
 const SPLASHMAIN_BASE = import.meta.env.VITE_SPLASHMAIN_URL || 'https://splashmain.vercel.app'
 
 export interface WalletStatus {
@@ -14,7 +16,7 @@ export interface WalletTransaction {
 
 export async function fetchWalletStatus(): Promise<WalletStatus | null> {
   try {
-    const res = await fetch(`${SPLASHMAIN_BASE}/api/wallet/status`, { credentials: 'include' })
+    const res = await apiFetch(`${SPLASHMAIN_BASE}/api/wallet/status`, { credentials: 'include' })
     if (!res.ok) return null
     return res.json()
   } catch {
@@ -24,7 +26,7 @@ export async function fetchWalletStatus(): Promise<WalletStatus | null> {
 
 export async function fetchWalletTransactions(): Promise<WalletTransaction[]> {
   try {
-    const res = await fetch(`${SPLASHMAIN_BASE}/api/wallet/transactions?limit=20`, { credentials: 'include' })
+    const res = await apiFetch(`${SPLASHMAIN_BASE}/api/wallet/transactions?limit=20`, { credentials: 'include' })
     const data = await res.json()
     return data.transactions ?? []
   } catch {
@@ -75,7 +77,7 @@ export async function payBookingFromWallet(
   amount: number
 ): Promise<{ ok: boolean; balance?: number; error?: string }> {
   try {
-    const res = await fetch(`${SPLASHMAIN_BASE}/api/wallet/pay-booking`, {
+    const res = await apiFetch(`${SPLASHMAIN_BASE}/api/wallet/pay-booking`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
@@ -99,7 +101,7 @@ export async function convertPointsToWallet(
   points: number
 ): Promise<{ ok: boolean; walletBalance?: number; pointsRemaining?: number; error?: string }> {
   try {
-    const res = await fetch(`${SPLASHMAIN_BASE}/api/loyalty/redeem`, {
+    const res = await apiFetch(`${SPLASHMAIN_BASE}/api/loyalty/redeem`, {
       method: 'POST',
       credentials: 'include',
       headers: { 'Content-Type': 'application/json' },

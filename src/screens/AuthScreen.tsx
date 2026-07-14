@@ -4,6 +4,7 @@ import { V2Field, V2FieldError, V2Input, V2PasswordInput } from '../components/v
 import { PasswordChecklist, isPasswordValid } from '../components/v2/PasswordChecklist'
 import { loginWithEmail, registerWithEmail, AuthError } from '../lib/auth'
 import { useAppStore } from '../store/useAppStore'
+import { popResumePath } from '../lib/tokenRefresh'
 
 type Mode = 'login' | 'register'
 
@@ -63,7 +64,11 @@ export function AuthScreen() {
         return
       }
       setCurrentUser(result.user!)
-      navigate('/home')
+      // If they got here because a dead refresh token bounced them out of
+      // somewhere else (not a fresh, voluntary login), return them exactly
+      // there instead of resetting to /home — that's the "graceful" part
+      // of graceful re-auth: no lost booking cart, no lost draft.
+      navigate(popResumePath() || '/home')
     } catch (e) {
       setLoginError(e instanceof AuthError ? e.message : 'Something went wrong. Please try again.')
     } finally { setLoginLoading(false) }

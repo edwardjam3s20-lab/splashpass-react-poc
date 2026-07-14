@@ -1,3 +1,4 @@
+import { apiFetch } from './tokenRefresh'
 const SPLASHMAIN_BASE = import.meta.env.VITE_SPLASHMAIN_URL || 'https://splashmain.vercel.app'
 const VAPID_PUBLIC_KEY = import.meta.env.VITE_VAPID_PUBLIC_KEY as string | undefined
 
@@ -57,7 +58,7 @@ export async function subscribeToReminders(email: string): Promise<{ ok: boolean
     })
   }
 
-  const res = await fetch(`${SPLASHMAIN_BASE}/api/customer/reminders/subscribe`, {
+  const res = await apiFetch(`${SPLASHMAIN_BASE}/api/customer/reminders/subscribe`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
@@ -78,7 +79,7 @@ export async function unsubscribeFromReminders(): Promise<void> {
   if (!subscription) return
   const endpoint = subscription.endpoint
   await subscription.unsubscribe()
-  await fetch(`${SPLASHMAIN_BASE}/api/customer/reminders/unsubscribe`, {
+  await apiFetch(`${SPLASHMAIN_BASE}/api/customer/reminders/unsubscribe`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },

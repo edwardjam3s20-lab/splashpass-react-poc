@@ -3,6 +3,7 @@
 // Profile management still hits Supabase directly (no sensitive RPCs needed).
 
 import { supabase } from './supabase'
+import { apiFetch } from './tokenRefresh'
 import type { Profile } from '../types/database'
 export type { Profile } from '../types/database'
 
@@ -155,7 +156,7 @@ const SPLASHMAIN_BASE = import.meta.env.VITE_SPLASHMAIN_URL || 'https://splashma
 // for the actual lookup; the one real caller (useSubscriptionPoll) already
 // only ever passes currentUser.email anyway.
 export async function getUserByEmail(_email: string): Promise<Profile | null> {
-  const res = await fetch(`${SPLASHMAIN_BASE}/api/customer/profile`, { credentials: 'include' })
+  const res = await apiFetch(`${SPLASHMAIN_BASE}/api/customer/profile`, { credentials: 'include' })
   if (res.status === 404) return null
   const data = await res.json().catch(() => ({}))
   if (!res.ok) throw new Error(data?.error || 'Failed to load profile.')
