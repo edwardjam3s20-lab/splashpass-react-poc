@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { SplashScreen } from './screens/SplashScreen'
 import { WelcomeScreen } from './screens/WelcomeScreen'
 import { AuthScreen } from './screens/AuthScreen'
+import { GoogleAuthCallbackScreen } from './screens/GoogleAuthCallbackScreen'
 import { VerifyEmailScreen } from './screens/VerifyEmailScreen'
 import { VerifyPhoneScreen } from './screens/VerifyPhoneScreen'
 import { ProfileSetupScreen } from './screens/ProfileSetupScreen'
@@ -47,6 +48,7 @@ function App() {
           <Route path="/" element={<SplashScreen />} />
           <Route path="/welcome" element={<WelcomeScreen />} />
           <Route path="/auth/:mode" element={<AuthScreen />} />
+          <Route path="/auth/google/callback" element={<GoogleAuthCallbackScreen />} />
           <Route path="/verify/email" element={<VerifyEmailScreen />} />
           <Route path="/verify/phone" element={<VerifyPhoneScreen />} />
           <Route path="/profile-setup" element={<ProfileSetupScreen />} />

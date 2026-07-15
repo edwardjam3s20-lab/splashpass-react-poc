@@ -8,6 +8,18 @@ import { popResumePath } from '../lib/tokenRefresh'
 
 type Mode = 'login' | 'register'
 
+const API = import.meta.env.VITE_API_BASE_URL as string
+
+// Full-page redirect (not a fetch) — splashmain's /api/auth/google sends
+// the browser to Google's consent screen, then Google sends it back to
+// splashmain's callback route, which finally redirects here to
+// /auth/google/callback with either an error, a pending-verification
+// token, or (on full success) nothing but a live session cookie.
+function startGoogleAuth() {
+  const next = `${window.location.origin}/auth/google/callback`
+  window.location.href = `${API}/api/auth/google?next=${encodeURIComponent(next)}`
+}
+
 function GoogleIcon() {
   return (
     <svg width="18" height="18" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -180,6 +192,19 @@ export function AuthScreen() {
               ) : 'Sign In'}
             </button>
 
+            {/* Divider */}
+            <div className="flex items-center gap-3 mb-4">
+              <div className="flex-1 h-px" style={{ background: '#EBEBED' }} />
+              <span className="text-[12px] text-muted font-medium">or continue with</span>
+              <div className="flex-1 h-px" style={{ background: '#EBEBED' }} />
+            </div>
+
+            <button onClick={startGoogleAuth}
+              className="sp-press w-full flex items-center justify-center gap-2.5 rounded-[14px] py-3.5 mb-5 text-[14px] font-semibold text-ink"
+              style={{ background: '#fff', border: '1.5px solid #EBEBED' }}>
+              <GoogleIcon /> Continue with Google
+            </button>
+
             <div className="text-center text-[13px] text-muted">
               No account?{' '}
               <span onClick={() => navigate('/auth/register')}
@@ -246,7 +271,7 @@ export function AuthScreen() {
             </div>
 
             {[
-              { icon: <GoogleIcon />, label: 'Continue with Google', action: () => showToast('Google sign-in coming soon.') },
+              { icon: <GoogleIcon />, label: 'Continue with Google', action: startGoogleAuth },
               { icon: <AppleIcon />, label: 'Continue with Apple',  action: () => showToast('Apple sign-in coming soon.') },
             ].map((b) => (
               <button key={b.label} onClick={b.action}
