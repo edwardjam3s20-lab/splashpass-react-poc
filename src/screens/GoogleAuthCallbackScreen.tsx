@@ -27,6 +27,7 @@ export function GoogleAuthCallbackScreen() {
     const pendingToken = params.get('pendingToken')
     const email = params.get('email')
     const needsPhone = params.get('needsPhone')
+    const profileIncomplete = params.get('profileIncomplete')
 
     if (googleAuthError) {
       const messages: Record<string, string> = {
@@ -53,7 +54,7 @@ export function GoogleAuthCallbackScreen() {
           return
         }
         setCurrentUser(user)
-        navigate(popResumePath() || '/home', { replace: true })
+        navigate(profileIncomplete ? '/profile-setup' : popResumePath() || '/home', { replace: true })
       })
       .catch(() => {
         showToast('Something went wrong finishing sign-in. Please try again.', true)
