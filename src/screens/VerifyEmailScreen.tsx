@@ -75,7 +75,7 @@ export function VerifyEmailScreen() {
       // Email verified — session issued by server, log user in
       setCurrentUser(data.user)
       showToast('Email verified! Welcome to SplashPass 🎉')
-      navigate('/home')
+      navigate('/onboarding')
     } catch {
       setError('Network error. Please try again.')
       setCode(['', '', '', '', '', ''])

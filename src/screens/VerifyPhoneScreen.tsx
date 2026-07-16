@@ -73,7 +73,7 @@ export function VerifyPhoneScreen() {
       // Both verified — full session cookie set by server, log user in
       setCurrentUser(data.user)
       showToast('Account verified! Welcome to SplashPass 🎉')
-      navigate('/home')
+      navigate('/onboarding')
     } catch {
       setError('Network error. Please try again.')
       setCode(['', '', '', '', '', ''])
