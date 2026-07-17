@@ -2,9 +2,11 @@ import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
 import { triggerStkPush } from '../lib/mpesa'
+import { payWithPaystackCard, verifyPaystackPayment, PaystackCancelledError } from '../lib/paystack'
 import { useSubscriptionPoll } from '../hooks/useSubscriptionPoll'
 
 type StatusKind = 'idle' | 'pending' | 'success' | 'error'
+type Method = 'mpesa' | 'card'
 
 export function MpesaSubscriptionScreen() {
   const navigate = useNavigate()
@@ -14,6 +16,7 @@ export function MpesaSubscriptionScreen() {
   const setSelectedSubPlan = useAppStore((s) => s.setSelectedSubPlan)
   const showToast = useAppStore((s) => s.showToast)
 
+  const [method, setMethod] = useState<Method>('mpesa')
   const [phone, setPhone] = useState(currentUser?.phone ?? '')
   const [status, setStatus] = useState<StatusKind>('idle')
   const [statusText, setStatusText] = useState('')
@@ -44,7 +47,7 @@ export function MpesaSubscriptionScreen() {
 
   if (!selectedSubPlan) return null
 
-  async function handlePay() {
+  async function handlePayMpesa() {
     if (!phone.trim()) { setStatus('error'); setStatusText('Please enter your M-Pesa number.'); return }
     setPaying(true); setStatus('pending'); setStatusText('Sending M-Pesa prompt…')
     try {
@@ -56,6 +59,32 @@ export function MpesaSubscriptionScreen() {
       setStatus('error'); setStatusText(e instanceof Error ? e.message : 'Something went wrong.')
     } finally { setPaying(false) }
   }
+
+  async function handlePayCard() {
+    if (!currentUser) return
+    setPaying(true); setStatus('idle'); setStatusText('')
+    try {
+      const { reference } = await payWithPaystackCard({
+        email: currentUser.email,
+        amountKES: selectedSubPlan!.price,
+        metadata: { purpose: 'subscription', planId: selectedSubPlan!.id },
+      })
+      setStatus('pending'); setStatusText('Confirming your payment…')
+      const { profile } = await verifyPaystackPayment(reference, selectedSubPlan!.id, currentUser.email)
+      setCurrentUser(profile)
+      setStatus('success'); setStatusText('Subscription activated!')
+      showToast('Subscription activated! 🎉')
+      setTimeout(() => { setSelectedSubPlan(null); navigate('/home') }, 2000)
+    } catch (e) {
+      if (e instanceof PaystackCancelledError) {
+        setStatus('idle'); setStatusText('')
+      } else {
+        setStatus('error'); setStatusText(e instanceof Error ? e.message : 'Something went wrong.')
+      }
+    } finally { setPaying(false) }
+  }
+
+  function handlePay() { method === 'mpesa' ? handlePayMpesa() : handlePayCard() }
 
   function handleBack() { setPollEnabled(false); setSelectedSubPlan(null); navigate('/plans') }
 
@@ -85,12 +114,32 @@ export function MpesaSubscriptionScreen() {
           </div>
         </div>
 
-        <div className="mb-4">
-          <label className="block text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-2">M-Pesa Phone Number</label>
-          <input type="tel" placeholder="0712 345 678" value={phone} onChange={(e) => setPhone(e.target.value)}
-            className="w-full rounded-[14px] px-4 py-3.5 text-[15px] font-semibold text-ink bg-white outline-none"
-            style={{ border: '1.5px solid #EBEBED' }} />
+        {/* Payment method toggle */}
+        <div className="flex gap-2 mb-4 rounded-[14px] p-1" style={{ background: '#EBEBED' }}>
+          <button onClick={() => { setMethod('mpesa'); setStatus('idle'); setStatusText('') }}
+            className="sp-press flex-1 rounded-[11px] py-2.5 text-[13px] font-bold"
+            style={method === 'mpesa' ? { background: '#fff', color: '#0A1628', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' } : { color: '#8A8A8E' }}>
+            M-Pesa
+          </button>
+          <button onClick={() => { setMethod('card'); setStatus('idle'); setStatusText('') }}
+            className="sp-press flex-1 rounded-[11px] py-2.5 text-[13px] font-bold"
+            style={method === 'card' ? { background: '#fff', color: '#0A1628', boxShadow: '0 2px 6px rgba(0,0,0,0.08)' } : { color: '#8A8A8E' }}>
+            Card
+          </button>
         </div>
+
+        {method === 'mpesa' ? (
+          <div className="mb-4">
+            <label className="block text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-2">M-Pesa Phone Number</label>
+            <input type="tel" placeholder="0712 345 678" value={phone} onChange={(e) => setPhone(e.target.value)}
+              className="w-full rounded-[14px] px-4 py-3.5 text-[15px] font-semibold text-ink bg-white outline-none"
+              style={{ border: '1.5px solid #EBEBED' }} />
+          </div>
+        ) : (
+          <div className="rounded-[14px] px-4 py-3.5 mb-4 text-[13px] leading-relaxed" style={{ background: '#fff', border: '1.5px solid #EBEBED', color: '#8A8A8E' }}>
+            You'll be asked for your card details in a secure Paystack window — SplashPass never sees or stores your card number.
+          </div>
+        )}
 
         {status !== 'idle' && (
           <div className="rounded-[14px] px-4 py-3 mb-4 text-[14px] font-medium flex items-center gap-2"
@@ -103,7 +152,7 @@ export function MpesaSubscriptionScreen() {
         <button onClick={handlePay} disabled={paying || status === 'success'}
           className="sp-press w-full rounded-[16px] py-4 mb-3 text-[15px] font-extrabold text-white"
           style={{ background: '#0A84FF', boxShadow: '0 8px 24px rgba(10,132,255,0.36)', opacity: paying ? 0.6 : 1 }}>
-          {paying ? 'Please wait…' : 'Pay Now'}
+          {paying ? 'Please wait…' : method === 'mpesa' ? 'Pay Now' : 'Pay with Card'}
         </button>
         <button onClick={handleBack} className="sp-press w-full rounded-[16px] py-4 text-[15px] font-bold text-ink"
           style={{ background: '#F5F5F7', border: '1px solid #EBEBED' }}>
