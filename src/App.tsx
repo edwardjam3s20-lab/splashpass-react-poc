@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { SplashScreen } from './screens/SplashScreen'
 import { WelcomeScreen } from './screens/WelcomeScreen'
+import { LegalScreen } from './screens/LegalScreen'
 import { AuthScreen } from './screens/AuthScreen'
 import { GoogleAuthCallbackScreen } from './screens/GoogleAuthCallbackScreen'
 import { VerifyEmailScreen } from './screens/VerifyEmailScreen'
@@ -47,6 +48,7 @@ function App() {
           {/* Pre-auth */}
           <Route path="/" element={<SplashScreen />} />
           <Route path="/welcome" element={<WelcomeScreen />} />
+          <Route path="/legal/:slug" element={<LegalScreen />} />
           <Route path="/auth/:mode" element={<AuthScreen />} />
           <Route path="/auth/google/callback" element={<GoogleAuthCallbackScreen />} />
           <Route path="/verify/email" element={<VerifyEmailScreen />} />

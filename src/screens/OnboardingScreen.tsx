@@ -19,6 +19,7 @@ export function OnboardingScreen() {
   const currentUser = useAppStore((s) => s.currentUser)
   const setCurrentUser = useAppStore((s) => s.setCurrentUser)
   const setUserCars = useAppStore((s) => s.setUserCars)
+  const setSelectedSubPlan = useAppStore((s) => s.setSelectedSubPlan)
   const showToast = useAppStore((s) => s.showToast)
 
   const [step, setStep] = useState<1 | 2 | 3>(1)
@@ -57,6 +58,29 @@ export function OnboardingScreen() {
     } catch (e) {
       setPlanError(e instanceof Error ? `Error: ${e.message}` : 'Something went wrong.')
     } finally { setFinishing(false) }
+  }
+
+  async function handlePayNow() {
+    if (!planId) { setPlanError('Please choose a plan to continue.'); return }
+    if (!currentUser) { setPlanError('Session expired. Please sign in again.'); return }
+    const plan = SUB_PLANS.find((p) => p.id === planId)
+    if (!plan) return
+    setPlanError(''); setFinishing(true)
+    try {
+      await createCar({ user_email: currentUser.email, make: make.trim(), model: model.trim(), colour: colour.trim(), plate: plate.trim().toUpperCase(), car_type: carType ?? '' })
+      // Leave sub_status as 'pending' rather than 'trial' — the M-Pesa
+      // callback (same one PlansScreen's Subscribe flow already uses)
+      // flips it to 'active' once payment actually confirms.
+      await updateProfile(currentUser.email, { sub_plan: plan.id, sub_plan_name: plan.name, sub_car_limit: plan.car_limit, sub_status: 'pending' })
+      setCurrentUser({ ...currentUser, sub_plan: plan.id, sub_plan_name: plan.name, sub_car_limit: plan.car_limit, sub_status: 'pending' })
+      const cars = await getCarsByEmail(currentUser.email)
+      setUserCars(cars)
+      setSelectedSubPlan(plan)
+      navigate('/mpesa/subscription')
+    } catch (e) {
+      setPlanError(e instanceof Error ? `Error: ${e.message}` : 'Something went wrong.')
+      setFinishing(false)
+    }
   }
 
   const stepLabels = ['Vehicle Type', 'Car Details', 'Choose Plan']
@@ -162,6 +186,11 @@ export function OnboardingScreen() {
               {finishing ? 'Please wait…' : 'Start Free Trial →'}
             </button>
           </div>
+          <button onClick={handlePayNow} disabled={finishing}
+            className="sp-press mt-2.5 w-full rounded-[16px] py-3.5 text-[14px] font-bold text-ink"
+            style={{ background: '#fff', border: '1.5px solid #EBEBED', opacity: finishing ? 0.6 : 1 }}>
+            {finishing ? 'Please wait…' : 'Pay Now via M-Pesa instead'}
+          </button>
         </div>
       )}
     </div>
