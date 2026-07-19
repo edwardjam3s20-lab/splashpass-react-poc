@@ -12,7 +12,7 @@ export function ProfileSetupScreen() {
   const showToast = useAppStore((s) => s.showToast)
 
   const [name, setName] = useState(currentUser?.name ?? '')
-  const [phone, setPhone] = useState(currentUser?.phone ?? '')
+  const [phone, setPhone] = useState('')
   const [error, setError] = useState('')
   const [saving, setSaving] = useState(false)
 
@@ -37,8 +37,7 @@ export function ProfileSetupScreen() {
         style={{ background: 'linear-gradient(160deg, #0A1628 0%, #0A2A4A 100%)' }}>
         <div style={{ position: 'absolute', right: -30, top: -30, width: 150, height: 150, borderRadius: 75, background: '#0A84FF', opacity: 0.07, pointerEvents: 'none' }} />
         <div className="flex items-center gap-2.5 mb-4">
-          <div className="flex h-9 w-9 items-center justify-center rounded-[11px] text-lg"
-            style={{ background: 'linear-gradient(135deg, #00C6BE, #0A84FF)' }}>💧</div>
+          <img src="/logo.png" alt="SplashPass" className="h-9 w-9 rounded-[11px]" />
           <div className="text-[16px] font-extrabold text-white" style={{ letterSpacing: '-0.3px' }}>SplashPass</div>
         </div>
         <div className="text-[22px] font-extrabold text-white mb-1" style={{ letterSpacing: '-0.5px' }}>Set up your profile</div>

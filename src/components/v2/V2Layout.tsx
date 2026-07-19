@@ -13,10 +13,12 @@ export function V2Screen({ children }: { children: ReactNode }) {
 export function V2Logo() {
   return (
     <div className="sp-fade-up mb-7 flex items-center gap-2.5">
-      <div className="flex h-9 w-9 items-center justify-center rounded-[11px] text-[17px]"
-        style={{ background: 'linear-gradient(135deg, #00C6BE, #0A84FF)', boxShadow: '0 6px 16px rgba(10,132,255,0.3)' }}>
-        💧
-      </div>
+      <img
+        src="/logo.png"
+        alt="SplashPass"
+        className="h-9 w-9 rounded-[11px]"
+        style={{ boxShadow: '0 6px 16px rgba(10,132,255,0.3)' }}
+      />
       <div className="text-[18px] font-extrabold text-ink" style={{ letterSpacing: '-0.4px' }}>SplashPass</div>
     </div>
   )

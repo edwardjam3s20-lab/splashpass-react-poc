@@ -53,8 +53,8 @@ self.addEventListener('push', (event: PushEvent) => {
   event.waitUntil(
     self.registration.showNotification(payload.title, {
       body: payload.body,
-      icon: '/icon.svg',
-      badge: '/icon.svg',
+      icon: '/icon-192.png',
+      badge: '/favicon-32.png',
       tag: payload.bookingId ? `reminder-${payload.bookingId}` : undefined,
       renotify: true,
       data: { url },

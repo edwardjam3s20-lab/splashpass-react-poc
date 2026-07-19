@@ -6,12 +6,20 @@ import { popResumePath } from '../lib/tokenRefresh'
 
 // Lands here after splashmain's /api/auth/google/callback redirects the
 // browser back. Three outcomes, distinguished by query params:
-//   1. ?googleAuthError=...      -> bounce to login with a toast
+//   1. ?googleAuthError=...      -> bounce to login with a toast (or, for
+//      the "no account" case, a persistent banner + CTA — see below)
 //   2. ?pendingToken=&email=&needsPhone=1 -> same "pending" path AuthScreen
 //      uses for password-login accounts that still need phone verification
 //   3. no params, session cookies already set by the server -> just need
 //      to hydrate `currentUser` in the store (the redirect itself doesn't
 //      carry the user object, unlike the JSON login/register responses)
+//
+// NOTE: the code(s) below for "no account exists for this Google email" are
+// a best guess (`no_account`, `account_not_found`, `not_registered`) — swap
+// these for whatever splashmain's /api/auth/google/callback actually sends
+// in that case.
+const NO_ACCOUNT_ERROR_CODES = ['no_account', 'account_not_found', 'not_registered']
+
 export function GoogleAuthCallbackScreen() {
   const navigate = useNavigate()
   const [params] = useSearchParams()
@@ -28,6 +36,15 @@ export function GoogleAuthCallbackScreen() {
     const email = params.get('email')
     const needsPhone = params.get('needsPhone')
     const profileIncomplete = params.get('profileIncomplete')
+
+    if (googleAuthError && NO_ACCOUNT_ERROR_CODES.includes(googleAuthError)) {
+      // Don't just toast-and-dead-end — send them to login with a notice
+      // AuthScreen renders as a persistent banner + "Create free account" CTA.
+      const qp = new URLSearchParams({ notice: 'no_account' })
+      if (email) qp.set('email', email)
+      navigate(`/auth/login?${qp.toString()}`, { replace: true })
+      return
+    }
 
     if (googleAuthError) {
       const messages: Record<string, string> = {

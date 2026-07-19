@@ -18,17 +18,14 @@ export function SplashScreen() {
       className="flex h-full flex-col items-center justify-center"
       style={{ background: 'linear-gradient(160deg, #0A1628 0%, #0A2A4A 100%)' }}
     >
-      {/* Animated drop */}
+      {/* Logo */}
       <div className="sp-float mb-5">
-        <div
-          className="flex h-20 w-20 items-center justify-center rounded-[24px] text-[40px]"
-          style={{
-            background: 'linear-gradient(135deg, #00C6BE, #0A84FF)',
-            boxShadow: '0 16px 48px rgba(10,132,255,0.4)',
-          }}
-        >
-          💧
-        </div>
+        <img
+          src="/logo.png"
+          alt="SplashPass"
+          className="h-20 w-20 rounded-[24px]"
+          style={{ boxShadow: '0 16px 48px rgba(10,132,255,0.4)' }}
+        />
       </div>
       <div
         className="text-[28px] font-extrabold text-white mb-1.5"

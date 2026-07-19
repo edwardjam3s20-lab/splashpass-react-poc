@@ -108,10 +108,7 @@ export function QRScreen() {
         }}>
         {/* Logo strip */}
         <div className="flex items-center justify-center gap-2 mb-5">
-          <div className="flex h-7 w-7 items-center justify-center rounded-[8px] text-base"
-            style={{ background: 'linear-gradient(135deg, #00C6BE, #0A84FF)' }}>
-            💧
-          </div>
+          <img src="/logo.png" alt="SplashPass" className="h-7 w-7 rounded-[8px]" />
           <span className="text-[14px] font-extrabold text-ink" style={{ letterSpacing: '-0.3px' }}>SplashPass</span>
         </div>
 

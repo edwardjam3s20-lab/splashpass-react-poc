@@ -82,6 +82,37 @@ export async function registerWithEmail(
   return { user: data.user, pendingToken: data.pendingToken }
 }
 
+// ─── Forgot / reset password ────────────────────────────────────────────────
+// Always resolves on a 2xx from /forgot-password — the backend responds
+// { ok: true } whether or not the email matches an account, so there's
+// nothing to branch on here beyond network/rate-limit failures.
+
+export async function requestPasswordReset(email: string): Promise<void> {
+  const res = await fetch(`${API}/api/auth/forgot-password`, {
+    method:      'POST',
+    credentials: 'include',
+    headers:     { 'Content-Type': 'application/json' },
+    body:        JSON.stringify({ email }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new AuthError(data.error || 'Could not send reset code.')
+}
+
+export async function resetPassword(
+  email: string,
+  code: string,
+  newPassword: string
+): Promise<void> {
+  const res = await fetch(`${API}/api/auth/reset-password`, {
+    method:      'POST',
+    credentials: 'include',
+    headers:     { 'Content-Type': 'application/json' },
+    body:        JSON.stringify({ email, code, newPassword }),
+  })
+  const data = await res.json().catch(() => ({}))
+  if (!res.ok) throw new AuthError(data.error || 'Could not reset password.')
+}
+
 // ─── Logout ───────────────────────────────────────────────────────────────────
 
 export async function logoutUser(): Promise<void> {

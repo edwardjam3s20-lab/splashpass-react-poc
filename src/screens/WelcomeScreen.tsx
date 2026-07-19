@@ -23,15 +23,12 @@ export function WelcomeScreen() {
           background: '#0A84FF', opacity: 0.08, top: -60, right: -60, pointerEvents: 'none',
         }} />
 
-        <div
-          className="sp-float flex h-16 w-16 items-center justify-center rounded-[20px] text-[32px] mb-5"
-          style={{
-            background: 'linear-gradient(135deg, #00C6BE, #0A84FF)',
-            boxShadow: '0 12px 40px rgba(10,132,255,0.4)',
-          }}
-        >
-          💧
-        </div>
+        <img
+          src="/logo.png"
+          alt="SplashPass"
+          className="sp-float h-16 w-16 rounded-[20px] mb-5"
+          style={{ boxShadow: '0 12px 40px rgba(10,132,255,0.4)' }}
+        />
 
         <div className="text-[13px] font-bold mb-2" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '1.5px', textTransform: 'uppercase' }}>
           SplashPass

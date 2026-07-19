@@ -4,6 +4,7 @@ import { SplashScreen } from './screens/SplashScreen'
 import { WelcomeScreen } from './screens/WelcomeScreen'
 import { LegalScreen } from './screens/LegalScreen'
 import { AuthScreen } from './screens/AuthScreen'
+import { ForgotPasswordScreen } from './screens/ForgotPasswordScreen'
 import { GoogleAuthCallbackScreen } from './screens/GoogleAuthCallbackScreen'
 import { VerifyEmailScreen } from './screens/VerifyEmailScreen'
 import { VerifyPhoneScreen } from './screens/VerifyPhoneScreen'
@@ -50,6 +51,7 @@ function App() {
           <Route path="/welcome" element={<WelcomeScreen />} />
           <Route path="/legal/:slug" element={<LegalScreen />} />
           <Route path="/auth/:mode" element={<AuthScreen />} />
+          <Route path="/auth/forgot-password" element={<ForgotPasswordScreen />} />
           <Route path="/auth/google/callback" element={<GoogleAuthCallbackScreen />} />
           <Route path="/verify/email" element={<VerifyEmailScreen />} />
           <Route path="/verify/phone" element={<VerifyPhoneScreen />} />

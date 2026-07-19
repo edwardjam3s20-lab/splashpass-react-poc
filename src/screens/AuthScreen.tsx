@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useEffect, useState } from 'react'
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { V2Field, V2FieldError, V2Input, V2PasswordInput } from '../components/v2/V2Form'
 import { PasswordChecklist, isPasswordValid } from '../components/v2/PasswordChecklist'
 import { loginWithEmail, registerWithEmail, AuthError } from '../lib/auth'
@@ -15,9 +15,15 @@ const API = import.meta.env.VITE_API_BASE_URL as string
 // splashmain's callback route, which finally redirects here to
 // /auth/google/callback with either an error, a pending-verification
 // token, or (on full success) nothing but a live session cookie.
-function startGoogleAuth() {
+//
+// `intent` records which button the user clicked (login vs. register) so
+// splashmain can, once it reads this param, tell apart "no account for
+// this Google email" from "there's already an account with this email" —
+// today the endpoint doesn't take this param, so it's a no-op until the
+// backend is updated to consume it.
+function startGoogleAuth(intent: Mode) {
   const next = `${window.location.origin}/auth/google/callback`
-  window.location.href = `${API}/api/auth/google?next=${encodeURIComponent(next)}`
+  window.location.href = `${API}/api/auth/google?next=${encodeURIComponent(next)}&intent=${intent}`
 }
 
 function GoogleIcon() {
@@ -43,23 +49,41 @@ export function AuthScreen() {
   const { mode: routeMode } = useParams<{ mode: string }>()
   const mode: Mode = routeMode === 'register' ? 'register' : 'login'
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
   const showToast = useAppStore((s) => s.showToast)
   const setCurrentUser = useAppStore((s) => s.setCurrentUser)
 
+  // Set either when GoogleAuthCallbackScreen bounces here after a Google
+  // sign-in attempt with no matching SplashPass account, or after a
+  // successful password reset — both redirect to /auth/login?email=...
+  // so the email doesn't need retyping. Captured once into state so
+  // stripping the URL param below doesn't lose it.
+  const emailFromRedirect = mode === 'login' ? searchParams.get('email') : null
+  const [showNoAccountNotice] = useState(() => mode === 'login' && searchParams.get('notice') === 'no_account')
+
   // Login state
-  const [loginEmail, setLoginEmail] = useState('')
+  const [loginEmail, setLoginEmail] = useState(emailFromRedirect || '')
   const [loginPass, setLoginPass]   = useState('')
   const [loginError, setLoginError] = useState('')
   const [loginLoading, setLoginLoading] = useState(false)
 
   // Register state
   const [regName, setRegName]   = useState('')
-  const [regEmail, setRegEmail] = useState('')
+  const [regEmail, setRegEmail] = useState(emailFromRedirect || '')
   const [regPhone, setRegPhone] = useState('')
   const [regPass, setRegPass]   = useState('')
   const [regPass2, setRegPass2] = useState('')
   const [regError, setRegError] = useState('')
   const [regLoading, setRegLoading] = useState(false)
+
+  useEffect(() => {
+    if (showNoAccountNotice) {
+      navigate('/auth/login', { replace: true })
+    }
+    // Strip the notice/email query params from the URL once, right after
+    // their initial values have been captured into state above.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   async function handleLogin() {
     setLoginLoading(true); setLoginError('')
@@ -122,10 +146,12 @@ export function AuthScreen() {
         }} />
         {/* Logo */}
         <div className="flex items-center gap-2.5 mb-6">
-          <div className="flex h-10 w-10 items-center justify-center rounded-[13px] text-xl"
-            style={{ background: 'linear-gradient(135deg, #00C6BE, #0A84FF)', boxShadow: '0 6px 20px rgba(10,132,255,0.4)' }}>
-            💧
-          </div>
+          <img
+            src="/logo.png"
+            alt="SplashPass"
+            className="h-10 w-10 rounded-[13px]"
+            style={{ boxShadow: '0 6px 20px rgba(10,132,255,0.4)' }}
+          />
           <div>
             <div className="text-[17px] font-extrabold text-white" style={{ letterSpacing: '-0.4px' }}>SplashPass</div>
             <div className="text-[10px] font-medium" style={{ color: 'rgba(255,255,255,0.4)', letterSpacing: '0.8px', textTransform: 'uppercase' }}>Premium Car Care</div>
@@ -160,6 +186,27 @@ export function AuthScreen() {
               Sign in to your SplashPass account.
             </p>
 
+            {showNoAccountNotice && (
+              <div
+                className="rounded-[14px] p-4 mb-5"
+                style={{ background: '#EFF6FF', border: '1px solid #BFDBFE' }}
+              >
+                <p className="text-[13px] font-semibold text-ink mb-0.5">No SplashPass account found</p>
+                <p className="text-[13px] text-muted mb-3 leading-relaxed">
+                  {emailFromRedirect
+                    ? `We couldn't find an account for ${emailFromRedirect}.`
+                    : "We couldn't find an account for that Google account."}{' '}
+                  Create one free — it only takes a minute.
+                </p>
+                <button
+                  onClick={() => navigate('/auth/register')}
+                  className="sp-press rounded-[11px] px-4 py-2 text-[13px] font-bold text-white"
+                  style={{ background: '#0A84FF' }}>
+                  Create free account
+                </button>
+              </div>
+            )}
+
             <V2Field label="Email Address">
               <V2Input type="email" placeholder="you@example.com" autoComplete="email"
                 value={loginEmail} onChange={(e) => setLoginEmail(e.target.value)} />
@@ -171,7 +218,8 @@ export function AuthScreen() {
             </V2Field>
 
             <div className="text-right mb-4">
-              <span className="text-[13px] font-semibold cursor-pointer" style={{ color: '#0A84FF' }}>
+              <span onClick={() => navigate('/auth/forgot-password')}
+                className="text-[13px] font-semibold cursor-pointer" style={{ color: '#0A84FF' }}>
                 Forgot password?
               </span>
             </div>
@@ -199,7 +247,7 @@ export function AuthScreen() {
               <div className="flex-1 h-px" style={{ background: '#EBEBED' }} />
             </div>
 
-            <button onClick={startGoogleAuth}
+            <button onClick={() => startGoogleAuth('login')}
               className="sp-press w-full flex items-center justify-center gap-2.5 rounded-[14px] py-3.5 mb-5 text-[14px] font-semibold text-ink"
               style={{ background: '#fff', border: '1.5px solid #EBEBED' }}>
               <GoogleIcon /> Continue with Google
@@ -271,7 +319,7 @@ export function AuthScreen() {
             </div>
 
             {[
-              { icon: <GoogleIcon />, label: 'Continue with Google', action: startGoogleAuth },
+              { icon: <GoogleIcon />, label: 'Continue with Google', action: () => startGoogleAuth('register') },
               { icon: <AppleIcon />, label: 'Continue with Apple',  action: () => showToast('Apple sign-in coming soon.') },
             ].map((b) => (
               <button key={b.label} onClick={b.action}
