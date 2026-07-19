@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
 import type { ReactNode } from 'react'
-import { Navigate, useLocation } from 'react-router-dom'
+import { Navigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
 import {
   scheduleSilentRefresh,
@@ -12,7 +12,6 @@ import {
 export function RequireAuth({ children }: { children: ReactNode }) {
   const currentUser = useAppStore((s) => s.currentUser)
   const logout = useAppStore((s) => s.logout)
-  const location = useLocation()
 
   useEffect(() => {
     if (!currentUser) return
@@ -35,16 +34,18 @@ export function RequireAuth({ children }: { children: ReactNode }) {
     return <Navigate to="/welcome" replace />
   }
 
-  // A password-based login never reaches a full session (currentUser set)
-  // while phone_verified is false — that path returns a pendingToken and
-  // routes through /verify/phone instead. The only way to land here with
-  // phone_verified false is a Google signup that hasn't finished
-  // /profile-setup yet, where currentUser.phone may still be empty or an
-  // internal placeholder (see splashmain's google/callback route) — not
-  // safe to use for booking/M-Pesa/SMS, so send them to finish that first.
-  if (currentUser.phone_verified === false && location.pathname !== '/profile-setup') {
-    return <Navigate to="/profile-setup" replace />
-  }
+  // NOTE: this app defers phone verification — a Google signup gets a full
+  // session with phone_verified still false and is expected to be able to
+  // use the rest of the app right away (see the comment in splashmain's
+  // google/callback/route.js). An earlier version of this file redirected
+  // any phone_verified===false session straight to /profile-setup on every
+  // route, which broke that: ProfileSetupScreen's own navigate('/onboarding')
+  // got bounced right back here, since saving a phone doesn't set
+  // phone_verified — nothing in this app currently does. The actual
+  // concern that guard was trying to address (a placeholder phone from a
+  // NOT NULL retry in google/callback/route.js reaching BookScreen's
+  // M-Pesa/SMS calls) belongs at the point of payment, not here — see the
+  // phone check added in BookScreen.tsx instead.
 
   return <>{children}</>
 }

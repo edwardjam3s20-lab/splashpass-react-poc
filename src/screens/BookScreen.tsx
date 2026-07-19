@@ -150,6 +150,19 @@ export function BookScreen() {
     if (!bookingSlot) return showToast('Please select a time slot.', true)
     if (!currentUser || !point) return
 
+    // Guards two cases before user_phone/sendBookingRequestSms below ever
+    // run: no phone on file yet (the normal state right after a Google
+    // signup, before they've been through /profile-setup), and — rarer —
+    // an internal placeholder phone from splashmain's google/callback
+    // route (see its NOT-NULL-retry comment), which won't match this
+    // format either. Both cases need a real phone before booking/M-Pesa
+    // proceeds, so send them to add one rather than letting either through.
+    if (!currentUser.phone || !/^\+\d{7,15}$/.test(currentUser.phone)) {
+      showToast('Please add your phone number before booking.', true)
+      navigate('/profile-setup')
+      return
+    }
+
     setSubmitting(true)
     try {
       const split = splitWashPrice(cost.washPrice, point.commission_tier)
