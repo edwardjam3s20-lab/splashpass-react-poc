@@ -48,8 +48,9 @@ export async function topUpWallet(
   email: string
 ): Promise<{ success: boolean; message?: string }> {
   try {
-    const res = await fetch('/api/mpesa-stk', {
+    const res = await fetch(`${SPLASHMAIN_BASE}/api/mpesa-stk`, {
       method: 'POST',
+      credentials: 'include',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         phone,

@@ -11,13 +11,16 @@ export interface StkPushOptions {
   transactionDesc?: string
 }
 
+const API = import.meta.env.VITE_API_BASE_URL as string
+
 export async function triggerStkPush(
   phone: string,
   amount: number,
   options?: StkPushOptions
 ): Promise<StkPushResult> {
-  const res = await fetch('/api/mpesa-stk', {
+  const res = await fetch(`${API}/api/mpesa-stk`, {
     method: 'POST',
+    credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ phone, amount, ...options }),
   })

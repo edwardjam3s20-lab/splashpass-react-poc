@@ -68,7 +68,11 @@ export function MpesaBookingScreen() {
     if (!phone.trim()) { setStatus('error'); setStatusText('Please enter your M-Pesa number.'); return }
     setPaying(true); setStatus('pending'); setStatusText('Sending M-Pesa prompt...')
     try {
-      const result = await triggerStkPush(phone.trim(), booking.total_amount!)
+      const result = await triggerStkPush(phone.trim(), booking.total_amount!, {
+        purpose: 'booking_payment',
+        email: currentUser?.email,
+        bookingId: booking.id,
+      })
       if (result.success) {
         setStatusText('Enter your M-Pesa PIN on your phone.')
         showToast('M-Pesa prompt sent!')

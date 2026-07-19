@@ -51,7 +51,10 @@ export function MpesaSubscriptionScreen() {
     if (!phone.trim()) { setStatus('error'); setStatusText('Please enter your M-Pesa number.'); return }
     setPaying(true); setStatus('pending'); setStatusText('Sending M-Pesa prompt…')
     try {
-      const result = await triggerStkPush(phone.trim(), selectedSubPlan!.price)
+      const result = await triggerStkPush(phone.trim(), selectedSubPlan!.price, {
+        purpose: 'subscription',
+        email: currentUser?.email,
+      })
       if (result.success) {
         setStatusText('Enter your M-Pesa PIN on your phone.'); showToast('M-Pesa prompt sent!'); setPollEnabled(true)
       } else { setStatus('error'); setStatusText(result.message || 'Payment failed.') }
