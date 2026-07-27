@@ -62,8 +62,12 @@ function normalise(r: WashPointRow, servicesByPoint: WashPointExtra[]): WashPoin
  * Unchanged from original — keeps existing callers (HomeScreen, etc.) working.
  */
 export async function fetchWashPoints(): Promise<WashPoint[]> {
+  // wash_points_public, not wash_points -- the base table's anon SELECT
+  // grant was removed (see supabase/005_public_read_lockdown.sql) since it
+  // exposed organization_id and other non-customer-facing columns. The
+  // view carries every column this app actually reads.
   const { data: rows, error: pointsError } = await supabase
-    .from('wash_points')
+    .from('wash_points_public')
     .select('*')
     .order('name', { ascending: true })
 
@@ -97,7 +101,7 @@ export async function fetchWashPointsInBounds(bounds: LatLngBounds): Promise<Was
   const { swLat, swLng, neLat, neLng } = bounds
 
   const { data: rows, error } = await supabase
-    .from('wash_points')
+    .from('wash_points_public')
     .select('*')
     .gte('lat', swLat - PAD)
     .lte('lat', neLat + PAD)
