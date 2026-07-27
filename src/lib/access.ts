@@ -1,6 +1,10 @@
 import type { Profile } from '../types/database'
 
-const TRIAL_DAYS = 30
+// Must match TRIAL_DAYS in splashmain's app/api/bookings/route.js — that
+// route is the actual enforcement point, so any mismatch here just shows
+// the customer a countdown that lies about when they'll actually get
+// locked out.
+const TRIAL_DAYS = 14
 
 export function getTrialDaysLeft(user: Profile | null): number {
   if (!user?.created_at) return 0

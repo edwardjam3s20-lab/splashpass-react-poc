@@ -551,7 +551,6 @@ export function BookScreen() {
 
               {[
                 { label: 'Service', value: cost.washPrice > 0 ? `KSh ${cost.washPrice.toLocaleString()}` : '—' },
-                ...(onTrial && cost.washPrice > 0 ? [{ label: 'Trial fee', value: 'KSh 30' }] : []),
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between py-1">
                   <span className="text-[13px] text-muted">{label}</span>

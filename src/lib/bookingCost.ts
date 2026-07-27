@@ -1,4 +1,3 @@
-import { isOnTrial } from './access'
 import type { Profile, WashPointExtra } from '../types/database'
 
 /**
@@ -62,8 +61,6 @@ function parseSlotDateTime(date: string, time: string): Date {
   return d
 }
 
-export const APP_BOOKING_FEE = 30 // KSh fee per booking during trial
-
 export interface BookingCost {
   washPrice: number
   appFee: number
@@ -71,19 +68,19 @@ export interface BookingCost {
 }
 
 /**
- * Mirrors updateBookingCost(). Loyalty tier discounts are intentionally
- * omitted here — that depends on the /api/loyalty/status endpoint and the
- * loyalty feature isn't ported yet, so this always behaves as if a user
- * has no loyalty discount (same as the original before that endpoint
- * resolves).
+ * Freemium model: no per-booking fee, ever — trial or subscribed, the
+ * customer only ever pays the wash price itself (mirrors the backend's
+ * app/api/bookings/route.js, which hardcodes appFee to 0 and derives
+ * washPrice from the DB regardless of what a client sends). `appFee` is
+ * kept in the return shape only so callers that still read `cost.appFee`
+ * don't need touching; they'll always see 0.
  */
 export function calculateBookingCost(
   service: WashPointExtra | null,
-  user: Profile | null
+  _user: Profile | null
 ): BookingCost {
   const washPrice = service ? Number(service.price) : 0
-  const onTrial = isOnTrial(user)
-  const appFee = onTrial && washPrice > 0 ? APP_BOOKING_FEE : 0
+  const appFee = 0
   const total = washPrice + appFee
   return { washPrice, appFee, total }
 }

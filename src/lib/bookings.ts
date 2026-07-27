@@ -106,15 +106,16 @@ export async function getBookingPaymentStatus(
 }
 
 /**
- * Commission split fallback — mirrors the original inline fallback used
- * whenever `window.SplashPassCommission` (an external script not present in
- * the original index.html) isn't loaded: 80% to the operator, 20% platform.
- * Swap this out for the real tiered logic if/when that script is ported.
+ * Freemium model: operator keeps 100% of wash_price, platform takes 0 —
+ * mirrors splashmain's app/api/bookings/route.js COMMISSION_TIERS, which
+ * are hardcoded to operatorRate: 1 for both tiers. The server recomputes
+ * this itself and ignores whatever the client sends, so this is only used
+ * for the on-screen cost breakdown, not for what actually gets charged.
  */
 export function splitWashPrice(washPrice: number, tier = 1) {
   return {
-    operatorAmount: Math.round(washPrice * 0.8),
-    platformAmount: Math.round(washPrice * 0.2),
+    operatorAmount: Math.round(washPrice),
+    platformAmount: 0,
     tier,
   }
 }
