@@ -5,6 +5,7 @@ import { PasswordChecklist, isPasswordValid } from '../components/v2/PasswordChe
 import { loginWithEmail, registerWithEmail, AuthError } from '../lib/auth'
 import { useAppStore } from '../store/useAppStore'
 import { popResumePath } from '../lib/tokenRefresh'
+import { getPendingReferralCode, clearPendingReferralCode } from '../lib/referrals'
 
 type Mode = 'login' | 'register'
 
@@ -76,6 +77,20 @@ export function AuthScreen() {
   const [regError, setRegError] = useState('')
   const [regLoading, setRegLoading] = useState(false)
 
+  // Referral code — pre-filled if the person arrived via a shared
+  // ?ref=CODE link (captured app-wide in App.tsx); shown as a collapsed
+  // optional field otherwise, for anyone who got a code by word of mouth.
+  const [regReferralCode, setRegReferralCode] = useState('')
+  const [showReferralField, setShowReferralField] = useState(false)
+
+  useEffect(() => {
+    const pending = getPendingReferralCode()
+    if (pending) {
+      setRegReferralCode(pending)
+      setShowReferralField(true)
+    }
+  }, [])
+
   useEffect(() => {
     if (showNoAccountNotice) {
       navigate('/auth/login', { replace: true })
@@ -125,7 +140,8 @@ export function AuthScreen() {
     }
     setRegLoading(true); setRegError('')
     try {
-      const { pendingToken } = await registerWithEmail(regName, regEmail, regPhone, regPass)
+      const { pendingToken } = await registerWithEmail(regName, regEmail, regPhone, regPass, regReferralCode)
+      clearPendingReferralCode()
       // Email OTP already sent by the register route — go straight to verify
       navigate(`/verify/email?email=${encodeURIComponent(regEmail.trim().toLowerCase())}&token=${encodeURIComponent(pendingToken)}`)
     } catch (e) {
@@ -293,6 +309,22 @@ export function AuthScreen() {
               <V2Input type="password" placeholder="Repeat password" autoComplete="new-password"
                 value={regPass2} onChange={(e) => setRegPass2(e.target.value)} />
             </V2Field>
+
+            {showReferralField ? (
+              <V2Field label="Referral Code (optional)">
+                <V2Input type="text" placeholder="e.g. JANE7F2A" autoComplete="off"
+                  value={regReferralCode}
+                  onChange={(e) => setRegReferralCode(e.target.value.toUpperCase())} />
+              </V2Field>
+            ) : (
+              <button
+                type="button"
+                onClick={() => setShowReferralField(true)}
+                className="mb-4 text-[13px] font-semibold text-muted underline"
+              >
+                Have a referral code?
+              </button>
+            )}
 
             <PasswordChecklist password={regPass} />
             <V2FieldError>{regError}</V2FieldError>

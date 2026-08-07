@@ -25,12 +25,12 @@ import { ProfileScreen } from './screens/ProfileScreen'
 import { AddCarScreen } from './screens/AddCarScreen'
 import { ChangePasswordScreen } from './screens/ChangePasswordScreen'
 import { DeleteAccountScreen } from './screens/DeleteAccountScreen'
-import { LoyaltyScreen } from './screens/LoyaltyScreen'
 import { PlansScreen } from './screens/PlansScreen'
 import { AppShell } from './components/AppShell'
 import { RequireAuth } from './components/RequireAuth'
 import { Toast } from './components/Toast'
 import { initOneSignal } from './lib/oneSignal'
+import { captureReferralFromUrl } from './lib/referrals'
 
 function App() {
   useEffect(() => {
@@ -40,6 +40,9 @@ function App() {
     // promptPushNotifications() called from a user gesture elsewhere
     // (e.g. a notifications settings screen).
     initOneSignal()
+    // A shared referral link (?ref=CODE) can land on any route — capture
+    // it once here rather than duplicating this in every entry screen.
+    captureReferralFromUrl()
   }, [])
 
   return (
@@ -93,14 +96,6 @@ function App() {
             element={
               <RequireAuth>
                 <WalletScreen />
-              </RequireAuth>
-            }
-          />
-          <Route
-            path="/loyalty"
-            element={
-              <RequireAuth>
-                <LoyaltyScreen />
               </RequireAuth>
             }
           />

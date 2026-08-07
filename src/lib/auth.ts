@@ -64,16 +64,23 @@ export interface RegisterResult {
 }
 
 export async function registerWithEmail(
-  name:     string,
-  email:    string,
-  phone:    string,
-  password: string
+  name:         string,
+  email:        string,
+  phone:        string,
+  password:     string,
+  referralCode?: string
 ): Promise<RegisterResult> {
   const res = await fetch(`${API}/api/auth/register`, {
     method:      'POST',
     credentials: 'include',
     headers:     { 'Content-Type': 'application/json' },
-    body:        JSON.stringify({ name, email, phone, password }),
+    body:        JSON.stringify({
+      name, email, phone, password,
+      // Blank/whitespace codes are dropped client-side too, but the
+      // backend already treats an absent or invalid code as a no-op —
+      // this is just to avoid sending an empty string vs omitting the key.
+      referral_code: referralCode?.trim() || undefined,
+    }),
   })
 
   const data = await res.json()

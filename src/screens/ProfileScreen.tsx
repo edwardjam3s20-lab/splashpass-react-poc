@@ -6,6 +6,9 @@ import { getTrialDaysLeft, isOnTrial } from '../lib/access'
 import { getTier } from '../lib/loyalty'
 import { getPushSupport, isSubscribedToReminders, subscribeToReminders, unsubscribeFromReminders, type PushSupport } from '../lib/reminders'
 import { isPushOptedIn, promptPushNotifications, type PushOptInResult } from '../lib/oneSignal'
+import { fetchReferralStatus, buildReferralShareText, type ReferralStatus } from '../lib/referrals'
+
+const SUPPORT_EMAIL = 'support@splashpass.site'
 
 function carEmoji(carType: string) {
   if (carType === 'SUV') return '🚙'
@@ -82,6 +85,15 @@ export function ProfileScreen() {
   // (OneSignal.User.PushSubscription.optOut()) can be added once we
   // confirm the exact API surface this SDK version exposes.
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
+  const [showReferralSheet, setShowReferralSheet] = useState(false)
+
+  function handleHelpAndSupport() {
+    const subject = encodeURIComponent('SplashPass support request')
+    const body = encodeURIComponent(
+      `Account: ${currentUser?.email ?? ''}\n\nDescribe your issue below:\n\n`
+    )
+    window.location.href = `mailto:${SUPPORT_EMAIL}?subject=${subject}&body=${body}`
+  }
 
   useEffect(() => {
     if (!currentUser) return
@@ -130,12 +142,6 @@ export function ProfileScreen() {
       ],
     },
     {
-      title: 'Rewards',
-      items: [
-        { icon: '🏆', label: `${tier.icon} ${tier.name} Tier`, sub: `${pts.toLocaleString()} points`, action: () => navigate('/loyalty') },
-      ],
-    },
-    {
       title: 'Account',
       items: [
         { icon: '🔒', label: 'Change Password', sub: '', action: () => navigate('/change-password') },
@@ -144,8 +150,8 @@ export function ProfileScreen() {
     {
       title: 'Support',
       items: [
-        { icon: '❓', label: 'Help & Support', sub: '', action: () => {} },
-        { icon: '📤', label: 'Refer a Friend', sub: 'Earn 50 pts per referral', action: () => showToast('Referral coming soon!') },
+        { icon: '❓', label: 'Help & Support', sub: 'Email our team', action: handleHelpAndSupport },
+        { icon: '📤', label: 'Refer a Friend', sub: 'Earn 50 pts per referral', action: () => setShowReferralSheet(true) },
       ],
     },
   ]
@@ -400,6 +406,110 @@ export function ProfileScreen() {
         <div className="text-center text-[12px] text-muted pb-2">
           SplashPass v2.0 · Made with 💧 in Mombasa
         </div>
+      </div>
+      {showReferralSheet && (
+        <ReferralSheet onClose={() => setShowReferralSheet(false)} showToast={showToast} />
+      )}
+
+    </div>
+  )
+}
+
+// ── Refer a Friend bottom sheet ─────────────────────────
+function ReferralSheet({
+  onClose, showToast,
+}: {
+  onClose: () => void
+  showToast: (msg: string, isError?: boolean) => void
+}) {
+  const [status, setStatus] = useState<ReferralStatus | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [copied, setCopied] = useState(false)
+
+  useEffect(() => {
+    fetchReferralStatus().then((data) => {
+      if (data) setStatus(data)
+      else setLoadError(true)
+    })
+  }, [])
+
+  async function handleShare() {
+    if (!status) return
+    const text = buildReferralShareText(status.referral_code)
+    if (navigator.share) {
+      try {
+        await navigator.share({ title: 'SplashPass', text })
+        return
+      } catch {
+        // User cancelled the native share sheet — fall through to clipboard
+        // below only if they didn't already get a share UI at all.
+        return
+      }
+    }
+    try {
+      await navigator.clipboard.writeText(text)
+      setCopied(true)
+      showToast('Referral message copied.')
+      setTimeout(() => setCopied(false), 2000)
+    } catch {
+      showToast('Could not copy. Long-press the code to copy it manually.', true)
+    }
+  }
+
+  return (
+    <div className="fixed inset-0 z-[200] flex items-end justify-center" style={{ background: 'rgba(0,0,0,0.5)' }} onClick={onClose}>
+      <div
+        className="w-full max-w-lg rounded-t-[24px] bg-white px-5 pt-6"
+        style={{ paddingBottom: 'calc(28px + env(safe-area-inset-bottom))' }}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="mx-auto mb-5 h-1 w-10 rounded-full" style={{ background: '#EBEBED' }} />
+        <div className="text-[18px] font-extrabold text-ink mb-1">Refer a Friend</div>
+        <div className="text-[13px] text-muted mb-5">
+          Share your code — you earn 50 points once they verify their email.
+        </div>
+
+        {loadError ? (
+          <div className="rounded-[14px] px-4 py-4 mb-4 text-center text-[13px]" style={{ background: '#FFF0EE', color: '#CC2222' }}>
+            Could not load your referral code. Try again in a moment.
+          </div>
+        ) : !status ? (
+          <div className="sp-skeleton h-20 rounded-[16px] mb-4" />
+        ) : (
+          <>
+            <div className="rounded-[16px] px-4 py-4 mb-3 text-center" style={{ background: '#F5F5F7' }}>
+              <div className="text-[11px] font-bold text-muted uppercase tracking-[0.6px] mb-1.5">
+                Your code
+              </div>
+              <div className="text-[28px] font-extrabold text-ink" style={{ letterSpacing: '2px' }}>
+                {status.referral_code}
+              </div>
+            </div>
+
+            <div className="flex gap-3 mb-4">
+              <div className="flex-1 rounded-[14px] px-3.5 py-3 text-center" style={{ background: '#F5F5F7' }}>
+                <div className="text-[18px] font-extrabold text-ink">{status.referral_count}</div>
+                <div className="text-[11px] text-muted mt-0.5">Referred</div>
+              </div>
+              <div className="flex-1 rounded-[14px] px-3.5 py-3 text-center" style={{ background: '#F5F5F7' }}>
+                <div className="text-[18px] font-extrabold text-ink">{status.points_earned}</div>
+                <div className="text-[11px] text-muted mt-0.5">Points earned</div>
+              </div>
+            </div>
+
+            <button
+              onClick={handleShare}
+              className="sp-press w-full rounded-[14px] py-3.5 text-[15px] font-bold text-white mb-2.5"
+              style={{ background: '#0A84FF' }}
+            >
+              {copied ? 'Copied!' : 'Share your code'}
+            </button>
+          </>
+        )}
+
+        <button onClick={onClose} className="w-full rounded-[14px] py-3.5 text-[15px] font-semibold text-muted">
+          Close
+        </button>
       </div>
     </div>
   )
