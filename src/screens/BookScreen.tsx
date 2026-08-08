@@ -7,7 +7,7 @@ import { useFullSlots } from '../hooks/useFullSlots'
 import { useLiveQueue } from '../hooks/useLiveQueue'
 import { QueueBadge } from '../components/QueueBadge'
 import { calculateBookingCost, generateSlots } from '../lib/bookingCost'
-import { createBooking, splitWashPrice, generateUniqueBookingCode } from '../lib/bookings'
+import { createBooking, splitWashPrice } from '../lib/bookings'
 import { sendBookingRequestSms } from '../lib/mpesa'
 import { isOnTrial, hasActiveAccess } from '../lib/access'
 import { StepBar } from '../components/ui'
@@ -166,7 +166,6 @@ export function BookScreen() {
     setSubmitting(true)
     try {
       const split = splitWashPrice(cost.washPrice, point.commission_tier)
-      const code = await generateUniqueBookingCode()
       const booking = await createBooking({
         user_email: currentUser.email,
         user_name: currentUser.name,
@@ -189,9 +188,8 @@ export function BookScreen() {
         splash_commission: split.platformAmount,
         commission_tier: split.tier,
         booking_type: onTrial ? 'trial' : 'subscription',
-        booking_code: code,
       })
-      setPendingBooking({ booking, code, date })
+      setPendingBooking({ booking, code: booking.booking_code ?? '', date })
       queryClient.invalidateQueries({ queryKey: ['bookings-by-date', date] })
       if (currentUser.phone) {
         sendBookingRequestSms(currentUser.phone, point.name, date, bookingSlot)

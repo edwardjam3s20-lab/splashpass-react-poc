@@ -42,32 +42,13 @@ export async function getBookingById(id: string): Promise<Booking | null> {
   return (data.booking as Booking) ?? null
 }
 
-/**
- * Generates a booking code that's actually checked against the database,
- * not just assumed unique. The previous version used `Math.random()` (not
- * cryptographically seeded) with no collision check at all — rare, but a
- * real risk that silently corrupted a customer's QR pass if it ever hit.
- * `crypto.randomUUID()` is well-distributed entropy; the loop below is a
- * belt-and-suspenders check against the table itself, so even an
- * astronomically unlikely collision gets caught and retried rather than
- * trusted blindly.
- */
-export async function generateUniqueBookingCode(): Promise<string> {
-  for (let attempt = 0; attempt < 5; attempt++) {
-    const raw = crypto.randomUUID().replace(/-/g, '').toUpperCase()
-    const code = 'SP' + raw.slice(0, 6)
-    const { data, error } = await supabase
-      .from('bookings')
-      .select('id')
-      .eq('booking_code', code)
-      .maybeSingle()
-    if (error) throw error
-    if (!data) return code
-  }
-  // Practically unreachable, but fail loudly rather than silently return a
-  // possibly-colliding code if every attempt above somehow collided.
-  throw new Error('Could not generate a unique booking code. Please try again.')
-}
+// booking_code generation moved server-side (see generateUniqueBookingCode
+// in splashmain's app/api/bookings/route.js) -- this used to run right
+// here as a direct anon-key Supabase read, which has zero grant on
+// `bookings` by design (see the RLS lockdown), so it 403'd unconditionally
+// and blocked every single booking before the request even reached the
+// server. The server already has an admin client with real permission to
+// do this check, so there's no reason for the browser to attempt it at all.
 
 // splashmain is this project's separate backend deployment — see
 // lib/mpesa.ts and lib/auth.ts for the same cross-origin pattern already

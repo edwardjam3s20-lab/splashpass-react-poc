@@ -96,7 +96,11 @@ export interface Booking {
   splash_commission: number
   commission_tier: number
   booking_type: 'trial' | 'subscription'
-  booking_code: string
+  // Optional because the server now generates this on insert (see
+  // generateUniqueBookingCode in splashmain's app/api/bookings/route.js)
+  // -- always present once a booking comes back from the server, never
+  // supplied by the client when creating one.
+  booking_code?: string
   payment_status?: 'pending' | 'paid'
   accepted_at?: string | null
   rejected_at?: string | null
