@@ -11,7 +11,7 @@ function statusBadge(booking: Booking) {
   if (booking.status === 'cancelled') return { label: 'Cancelled', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
   if (booking.status === 'rejected') return { label: 'Declined', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
   if (booking.status === 'pending') return { label: 'Pending', bg: 'rgba(255,159,10,0.12)', color: '#B25A00' }
-  if (isBookingMissed(booking.date, booking.time, booking.status)) {
+  if (isBookingMissed(booking.date, booking.time, booking.status, booking.created_at)) {
     return { label: 'Missed', bg: 'rgba(174,174,178,0.18)', color: '#6E6E73' }
   }
   return { label: 'Upcoming', bg: 'rgba(10,132,255,0.1)', color: '#0A84FF' }
@@ -20,7 +20,9 @@ function statusBadge(booking: Booking) {
 function BookingCard({ booking, onViewPass }: { booking: Booking; onViewPass: (id: string) => void }) {
   const badge = statusBadge(booking)
   const carInfo = `${booking.car_make ?? ''} ${booking.car_model ?? ''}`.trim()
-  const canViewPass = booking.status === 'confirmed' && !isBookingMissed(booking.date, booking.time, booking.status)
+  const canViewPass =
+    booking.status === 'confirmed' &&
+    !isBookingMissed(booking.date, booking.time, booking.status, booking.created_at)
 
   return (
     <div
@@ -124,7 +126,7 @@ export function BookingsScreen() {
 
   const filtered = bookings.filter((b) => {
     if (filter === 'all') return true
-    const missed = isBookingMissed(b.date, b.time, b.status)
+    const missed = isBookingMissed(b.date, b.time, b.status, b.created_at)
     if (filter === 'upcoming') return (b.status === 'accepted' || b.status === 'confirmed') && !missed
     if (filter === 'missed') return missed
     return b.status === filter

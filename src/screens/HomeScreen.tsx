@@ -62,7 +62,7 @@ function statusBadge(b: Booking) {
   if (b.status === 'cancelled') return { label: 'Cancelled', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
   if (b.status === 'rejected') return { label: 'Declined', bg: 'rgba(255,59,48,0.1)', color: '#FF3B30' }
   if (b.status === 'pending') return { label: 'Pending', bg: 'rgba(255,159,10,0.12)', color: '#B25A00' }
-  if (isBookingMissed(b.date, b.time, b.status)) {
+  if (isBookingMissed(b.date, b.time, b.status, b.created_at)) {
     return { label: 'Missed', bg: 'rgba(174,174,178,0.18)', color: '#6E6E73' }
   }
   return { label: 'Upcoming', bg: 'rgba(10,132,255,0.1)', color: '#0A84FF' }

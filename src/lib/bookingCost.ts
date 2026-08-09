@@ -33,19 +33,45 @@ function todayISO(): string {
   return new Date().toISOString().split('T')[0]
 }
 
+// How long after the scheduled slot (or, for ASAP bookings, after the
+// booking was created) a customer/operator has before it flips to Missed.
+const MISSED_GRACE_PERIOD_MS = 15 * 60 * 1000 // 15 minutes
+
 /**
- * True if a booking's scheduled date+time has passed while it's still
- * sitting in 'accepted' or 'confirmed' — i.e. nobody ever marked it
- * completed or cancelled, and the slot it was for is now in the past.
- * Computed at render time rather than as a stored status, since flipping
- * it for real would need a cron job / scheduled function; this is purely
- * a display-layer correction so "Upcoming" doesn't keep showing for a
- * booking whose time has clearly already gone by.
+ * True if a booking's scheduled date+time has passed — plus a 15-minute
+ * grace period — while it's still sitting in 'accepted' or 'confirmed',
+ * i.e. nobody ever marked it completed or cancelled. Computed at render
+ * time rather than as a stored status, since flipping it for real would
+ * need a cron job / scheduled function; this is purely a display-layer
+ * correction so "Upcoming" doesn't keep showing for a booking whose grace
+ * period has clearly elapsed.
+ *
+ * ASAP bookings have no real slot time (time === "ASAP"), so there's
+ * nothing to add a grace period to — instead the grace period is measured
+ * from `createdAt` (when the booking was made). Without `createdAt`, an
+ * ASAP booking is never considered missed, rather than guessing.
  */
-export function isBookingMissed(date: string, time: string, status: string): boolean {
+export function isBookingMissed(
+  date: string,
+  time: string,
+  status: string,
+  createdAt?: string | null
+): boolean {
   if (status !== 'accepted' && status !== 'confirmed') return false
+
+  if (isAsapSlot(time)) {
+    if (!createdAt) return false
+    const created = new Date(createdAt).getTime()
+    if (Number.isNaN(created)) return false
+    return created + MISSED_GRACE_PERIOD_MS < Date.now()
+  }
+
   const slot = parseSlotDateTime(date, time)
-  return slot.getTime() < Date.now()
+  return slot.getTime() + MISSED_GRACE_PERIOD_MS < Date.now()
+}
+
+function isAsapSlot(time: string): boolean {
+  return time.trim().toUpperCase() === 'ASAP'
 }
 
 function parseSlotDateTime(date: string, time: string): Date {
