@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom'
 import { useAppStore } from '../store/useAppStore'
 import { triggerStkPush } from '../lib/mpesa'
 import { fetchWalletStatus, payBookingFromWallet } from '../lib/wallet'
+import { payBookingWithCash } from '../lib/cash'
 import { useBookingPaymentPoll } from '../hooks/useBookingPaymentPoll'
 
 type StatusKind = 'idle' | 'pending' | 'success' | 'error'
+type PaymentMethod = 'mpesa' | 'wallet' | 'cash'
 
 export function MpesaBookingScreen() {
   const navigate = useNavigate()
@@ -20,9 +22,10 @@ export function MpesaBookingScreen() {
   const [paying, setPaying] = useState(false)
   const [pollEnabled, setPollEnabled] = useState(false)
   const [manualConfirmAvailable, setManualConfirmAvailable] = useState(false)
-  const [method, setMethod] = useState<'mpesa' | 'wallet'>('mpesa')
+  const [method, setMethod] = useState<PaymentMethod>('mpesa')
   const [walletBalance, setWalletBalance] = useState<number | null>(null)
   const [walletPaying, setWalletPaying] = useState(false)
+  const [cashPaying, setCashPaying] = useState(false)
 
   useEffect(() => {
     fetchWalletStatus().then((s) => { if (s) setWalletBalance(s.balance) })
@@ -103,6 +106,22 @@ export function MpesaBookingScreen() {
     }
   }
 
+  async function handleCashPay() {
+    setCashPaying(true)
+    try {
+      const result = await payBookingWithCash(booking.id)
+      if (!result.ok) {
+        showToast(result.error || 'Could not confirm cash payment', true)
+        return
+      }
+      setStatus('success'); setStatusText('Booking confirmed!')
+      showToast('Pay the operator on arrival!')
+      setTimeout(() => navigate('/confirmed'), 1000)
+    } finally {
+      setCashPaying(false)
+    }
+  }
+
   function handleManualConfirm() {
     setPollEnabled(false); setManualConfirmAvailable(false)
     setStatus('success'); setStatusText('Payment confirmed!')
@@ -147,13 +166,13 @@ export function MpesaBookingScreen() {
             {amountKnown ? `KSh ${amount.toLocaleString()}` : 'Amount unavailable'}
           </div>
           <div className="text-[13px] mt-2" style={{ color: 'rgba(255,255,255,0.45)' }}>
-            via M-Pesa
+            {method === 'mpesa' ? 'via M-Pesa' : method === 'wallet' ? 'via Wallet' : 'Pay in cash at the wash point'}
           </div>
         </div>
 
         {/* Payment method toggle */}
         <div className="flex rounded-[14px] p-1 mb-4" style={{ background: '#EBEBED' }}>
-          {(['mpesa', 'wallet'] as const).map((m) => (
+          {(booking.cash_eligible ? (['mpesa', 'wallet', 'cash'] as const) : (['mpesa', 'wallet'] as const)).map((m) => (
             <button
               key={m}
               onClick={() => setMethod(m)}
@@ -164,12 +183,33 @@ export function MpesaBookingScreen() {
                 boxShadow: method === m ? '0 2px 6px rgba(0,0,0,0.08)' : 'none',
               }}
             >
-              {m === 'mpesa' ? '📱 M-Pesa' : `👛 Wallet`}
+              {m === 'mpesa' ? '📱 M-Pesa' : m === 'wallet' ? '👛 Wallet' : '💵 Cash'}
             </button>
           ))}
         </div>
 
-        {method === 'wallet' ? (
+        {method === 'cash' ? (
+          <>
+            <div className="rounded-[16px] bg-white p-4 mb-4" style={{ border: '1px solid #EBEBED' }}>
+              <div className="text-[13px] text-ink leading-relaxed">
+                Pay the operator directly, in cash, when you arrive at the wash point. Your booking will be confirmed now — no payment happens through the app.
+              </div>
+            </div>
+
+            <button
+              onClick={handleCashPay}
+              disabled={cashPaying || status === 'success' || !amountKnown}
+              className="sp-press w-full rounded-[16px] py-4 mb-3 text-[15px] font-extrabold text-white"
+              style={{
+                background: '#0A84FF',
+                boxShadow: '0 8px 24px rgba(10,132,255,0.36)',
+                opacity: cashPaying || status === 'success' || !amountKnown ? 0.5 : 1,
+              }}
+            >
+              {cashPaying ? 'Confirming…' : `Confirm — Pay KSh ${amount.toLocaleString()} in Cash`}
+            </button>
+          </>
+        ) : method === 'wallet' ? (
           <>
             <div className="rounded-[16px] bg-white p-4 mb-4" style={{ border: '1px solid #EBEBED' }}>
               <div className="flex items-center justify-between">

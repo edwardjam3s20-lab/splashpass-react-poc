@@ -101,7 +101,12 @@ export interface Booking {
   // -- always present once a booking comes back from the server, never
   // supplied by the client when creating one.
   booking_code?: string
-  payment_status?: 'pending' | 'paid'
+  payment_status?: 'pending' | 'paid' | 'cash'
+  // Only present when a booking is fetched by id (the payment screen) —
+  // see app/api/customer/bookings/route.js. True when the wash point's
+  // organization currently has access (trial or paid subscription), the
+  // same threshold that already gives them 0% platform commission.
+  cash_eligible?: boolean
   accepted_at?: string | null
   rejected_at?: string | null
   rejection_reason?: string | null
