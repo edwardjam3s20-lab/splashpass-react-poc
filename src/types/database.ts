@@ -19,6 +19,12 @@ export interface WashPointRow {
   lng: string | number
   description: string | null
   image_url: string | null
+  // Present on wash_points itself; may or may not be exposed yet through
+  // the wash_points_public view this app actually reads from (the view
+  // was created directly in the Supabase SQL editor, not tracked in this
+  // repo — see fetchWashPoints in lib/washPoints.ts). Optional/nullable so
+  // this doesn't break if the view hasn't been updated to include it.
+  photos?: string[] | null
   status: 'open' | 'paused' | null
   commission_tier: number | null
   opens_at: string | null
@@ -34,6 +40,7 @@ export interface WashPoint {
   lng: number
   description: string | null
   image_url: string | null
+  photos: string[]
   status: 'open' | 'paused'
   services: WashPointExtra[]
   commission_tier: number

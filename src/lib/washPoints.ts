@@ -47,6 +47,7 @@ function normalise(r: WashPointRow, servicesByPoint: WashPointExtra[]): WashPoin
     lng: parseFloat(String(r.lng)),
     description: r.description ?? null,
     image_url: r.image_url ?? null,
+    photos: Array.isArray(r.photos) ? r.photos : [],
     status: r.status ?? 'open',
     services: servicesByPoint.filter((s) => s.wash_point_id === r.id),
     commission_tier: r.commission_tier != null ? Number(r.commission_tier) : 1,

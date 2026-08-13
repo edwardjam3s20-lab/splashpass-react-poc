@@ -1,4 +1,6 @@
 import type { Profile, WashPointExtra } from '../types/database'
+import type { Promotion } from './promotions'
+import { applyPromotionDiscount } from './promotions'
 
 /**
  * Generates hourly slot labels between a wash point's opens_at/closes_at
@@ -91,6 +93,8 @@ export interface BookingCost {
   washPrice: number
   appFee: number
   total: number
+  /** Pre-discount price, only differs from washPrice when a promotion is applied. */
+  originalWashPrice: number
 }
 
 /**
@@ -100,13 +104,21 @@ export interface BookingCost {
  * washPrice from the DB regardless of what a client sends). `appFee` is
  * kept in the return shape only so callers that still read `cost.appFee`
  * don't need touching; they'll always see 0.
+ *
+ * `promotion` is a client-side preview only — the server independently
+ * re-derives and applies the real active promotion at booking time (see
+ * app/api/bookings/route.js), so this can never be the actual source of
+ * truth for what gets charged. It exists so the customer sees the
+ * discounted price before confirming, not after.
  */
 export function calculateBookingCost(
   service: WashPointExtra | null,
-  _user: Profile | null
+  _user: Profile | null,
+  promotion?: Promotion | null
 ): BookingCost {
-  const washPrice = service ? Number(service.price) : 0
+  const originalWashPrice = service ? Number(service.price) : 0
+  const washPrice = promotion ? applyPromotionDiscount(originalWashPrice, promotion) : originalWashPrice
   const appFee = 0
   const total = washPrice + appFee
-  return { washPrice, appFee, total }
+  return { washPrice, appFee, total, originalWashPrice }
 }

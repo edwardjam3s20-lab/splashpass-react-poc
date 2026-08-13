@@ -26,6 +26,8 @@ import { QueueBadge } from '../components/QueueBadge'
 import { distKm } from '../lib/washPoints'
 import type { LatLngBounds } from '../lib/washPoints'
 import type { WashPoint } from '../types/database'
+import { fetchActivePromotions } from '../lib/promotions'
+import type { Promotion } from '../lib/promotions'
 
 function todayISO() {
   return new Date().toISOString().split('T')[0]
@@ -177,9 +179,10 @@ function WashCard({
   const closeH   = parseInt((point.closes_at || '21:00').split(':')[0], 10)
   const closingSoon = isOpen && closeH - now.getHours() <= 1
 
-  const hasPhoto    = Boolean(point.image_url)
+  const hasPhoto    = Boolean(point.image_url || point.photos?.[0])
   const [photoFailed, setPhotoFailed] = useState(false)
   const showPhoto = hasPhoto && !photoFailed
+  const coverPhoto = point.image_url || point.photos?.[0]
   const servicePills = point.services.slice(0, 3)
 
   return (
@@ -203,7 +206,7 @@ function WashCard({
       {showPhoto && (
         <div style={{ height: 110, position: 'relative', overflow: 'hidden' }}>
           <img
-            src={point.image_url!}
+            src={coverPhoto!}
             alt={point.name}
             loading="lazy"
             style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
@@ -480,6 +483,13 @@ export function DiscoveryScreen() {
   const [selectedId,   setSelectedId]   = useState<string | null>(null)
   const [search,       setSearch]       = useState('')
   const [activeFilter, setActiveFilter] = useState('nearest')
+  const [deals,        setDeals]        = useState<Promotion[]>([])
+
+  useEffect(() => {
+    let cancelled = false
+    fetchActivePromotions().then((list) => { if (!cancelled) setDeals(list) })
+    return () => { cancelled = true }
+  }, [])
 
   const sheetRef    = useRef<HTMLDivElement>(null)
   const dragStartY  = useRef(0)
@@ -957,6 +967,44 @@ export function DiscoveryScreen() {
         </div>
 
         <div style={{ height: 1, background: '#F5F5F7', flexShrink: 0 }} />
+
+        {/* Deals — active promotions across every washpoint, not filtered
+            by search/activeFilter since it's a discovery surface of its
+            own, not part of the wash-point list below it. */}
+        {deals.length > 0 && (
+          <div style={{ padding: '12px 14px 4px', flexShrink: 0 }}>
+            <div style={{ fontSize: 13, fontWeight: 800, color: '#0D0D0D', marginBottom: 8 }}>
+              🏷️ Deals near you
+            </div>
+            <div style={{
+              display: 'flex', gap: 8, overflowX: 'auto',
+              paddingBottom: 4, scrollbarWidth: 'none', msOverflowStyle: 'none',
+            }}>
+              {deals.map((deal) => (
+                <button
+                  key={deal.id}
+                  onClick={() => navigate(`/book/${deal.wash_point_id}`)}
+                  style={{
+                    flexShrink: 0, width: 200, textAlign: 'left',
+                    borderRadius: 14, padding: '12px 14px',
+                    background: 'linear-gradient(135deg, #FF3B30 0%, #FF6B57 100%)',
+                    border: 'none', cursor: 'pointer', fontFamily: 'inherit',
+                  }}
+                >
+                  <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 2 }}>
+                    {deal.discount_type === 'percent' ? `${deal.discount_value}% off` : `KSh ${deal.discount_value} off`}
+                  </div>
+                  <div style={{ fontSize: 12, fontWeight: 600, color: 'rgba(255,255,255,0.9)', marginBottom: 2 }}>
+                    {deal.title}
+                  </div>
+                  <div style={{ fontSize: 11, color: 'rgba(255,255,255,0.75)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {deal.wash_point_name}{deal.service_name ? ` · ${deal.service_name}` : ''}
+                  </div>
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
 
         {/* Scrollable list */}
         <div style={{

@@ -7,6 +7,8 @@ import { useFullSlots } from '../hooks/useFullSlots'
 import { useLiveQueue } from '../hooks/useLiveQueue'
 import { QueueBadge } from '../components/QueueBadge'
 import { calculateBookingCost, generateSlots } from '../lib/bookingCost'
+import { fetchPromotionsForWashPoint, pickBestPromotion, applyPromotionDiscount } from '../lib/promotions'
+import type { Promotion } from '../lib/promotions'
 import { createBooking, splitWashPrice } from '../lib/bookings'
 import { sendBookingRequestSms } from '../lib/mpesa'
 import { isOnTrial, hasActiveAccess } from '../lib/access'
@@ -84,6 +86,15 @@ export function BookScreen() {
     }
   }, [quickBook, bookingService, point, setBookingService])
 
+  const [promotions, setPromotions] = useState<Promotion[]>([])
+  useEffect(() => {
+    if (!point) return
+    let cancelled = false
+    fetchPromotionsForWashPoint(point.id).then((list) => { if (!cancelled) setPromotions(list) })
+    return () => { cancelled = true }
+  }, [point?.id])
+  const activePromotion = pickBestPromotion(promotions, bookingService?.id ?? null)
+
 
 
   if (!point) {
@@ -134,7 +145,7 @@ export function BookScreen() {
     )
   }
 
-  const cost = calculateBookingCost(bookingService, currentUser)
+  const cost = calculateBookingCost(bookingService, currentUser, activePromotion)
   const onTrial = isOnTrial(currentUser)
 
   // Steps validation
@@ -237,6 +248,28 @@ export function BookScreen() {
         {/* ── Step 0: Service + Car ── */}
         {step === 0 && (
           <div className="sp-fade-up">
+            {/* Photo gallery — operator-uploaded photos of this washpoint,
+                see OrgWashpointPhotosScreen.tsx on the operator side. Shown
+                first, before the car selector, so it's the first thing a
+                customer sees when deciding whether to book here. */}
+            {point.photos.length > 0 && (
+              <div
+                className="mb-4 flex gap-2 overflow-x-auto pb-1"
+                style={{ scrollSnapType: 'x mandatory' }}
+              >
+                {point.photos.map((url) => (
+                  <img
+                    key={url}
+                    src={url}
+                    alt={point.name}
+                    loading="lazy"
+                    className="h-32 w-44 flex-shrink-0 rounded-[14px] object-cover"
+                    style={{ scrollSnapAlign: 'start', border: '1.5px solid #EBEBED' }}
+                  />
+                ))}
+              </div>
+            )}
+
             {/* Car selector */}
             {userCars.length > 0 && (
               <>
@@ -351,12 +384,33 @@ export function BookScreen() {
                         </div>
                       </div>
                       <div className="text-right flex-shrink-0">
-                        <div
-                          className="text-[16px] font-extrabold"
-                          style={{ color: sel ? '#0A84FF' : '#0D0D0D', letterSpacing: '-0.3px' }}
-                        >
-                          KSh {Number(s.price).toLocaleString()}
-                        </div>
+                        {(() => {
+                          const rowPromo = pickBestPromotion(promotions, s.id)
+                          if (!rowPromo) {
+                            return (
+                              <div
+                                className="text-[16px] font-extrabold"
+                                style={{ color: sel ? '#0A84FF' : '#0D0D0D', letterSpacing: '-0.3px' }}
+                              >
+                                KSh {Number(s.price).toLocaleString()}
+                              </div>
+                            )
+                          }
+                          const discounted = applyPromotionDiscount(Number(s.price), rowPromo)
+                          return (
+                            <>
+                              <div className="text-[11px] text-muted line-through">
+                                KSh {Number(s.price).toLocaleString()}
+                              </div>
+                              <div
+                                className="text-[16px] font-extrabold"
+                                style={{ color: '#FF3B30', letterSpacing: '-0.3px' }}
+                              >
+                                KSh {discounted.toLocaleString()}
+                              </div>
+                            </>
+                          )
+                        })()}
                         {sel && (
                           <div
                             className="h-5 w-5 rounded-full flex items-center justify-center text-[11px] font-bold text-white ml-auto mt-1"
@@ -548,13 +602,24 @@ export function BookScreen() {
               <div style={{ height: 1, background: '#EBEBED', margin: '12px 0' }} />
 
               {[
-                { label: 'Service', value: cost.washPrice > 0 ? `KSh ${cost.washPrice.toLocaleString()}` : '—' },
+                { label: 'Service', value: cost.originalWashPrice > 0 ? `KSh ${cost.originalWashPrice.toLocaleString()}` : '—' },
               ].map(({ label, value }) => (
                 <div key={label} className="flex justify-between py-1">
                   <span className="text-[13px] text-muted">{label}</span>
                   <span className="text-[13px] text-ink">{value}</span>
                 </div>
               ))}
+
+              {activePromotion && cost.originalWashPrice !== cost.washPrice && (
+                <div className="flex justify-between py-1">
+                  <span className="text-[13px]" style={{ color: '#FF3B30' }}>
+                    🏷️ {activePromotion.title}
+                  </span>
+                  <span className="text-[13px] font-semibold" style={{ color: '#FF3B30' }}>
+                    − KSh {(cost.originalWashPrice - cost.washPrice).toLocaleString()}
+                  </span>
+                </div>
+              )}
 
               <div className="flex justify-between pt-3 mt-2" style={{ borderTop: '1px solid #EBEBED' }}>
                 <span className="text-[15px] font-extrabold text-ink">Total</span>
